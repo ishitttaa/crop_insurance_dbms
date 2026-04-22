@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Claims — Crop Insurance System</title>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-brand">
+    <div class="nav-logo">CI</div>
+    <span>Crop Insurance System</span>
+  </div>
+  <div class="nav-links">
+    <a href="index.html">Dashboard</a>
+    <a href="farmers.html">Farmers</a>
+    <a href="claims.html" class="active">Claims</a>
+  </div>
+</nav>
+
+<main class="container">
+  <div class="page-header">
+    <h1>Insurance Claims</h1>
+    <p>All claims generated — including auto-triggered claims from weather events</p>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="card filter-bar">
+    <label>Filter by status:</label>
+    <button class="filter-btn active" onclick="filterStatus('ALL', this)">All</button>
+    <button class="filter-btn" onclick="filterStatus('Pending', this)">Pending</button>
+    <button class="filter-btn" onclick="filterStatus('Approved', this)">Approved</button>
+    <button class="filter-btn" onclick="filterStatus('Rejected', this)">Rejected</button>
+  </div>
+
+  <div class="card">
+    <div class="card-header">Claims List</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Claim ID</th><th>Farmer</th><th>District</th>
+            <th>Date</th><th>Rainfall (mm)</th>
+            <th>Sum Insured (₹)</th><th>Payout (₹)</th>
+            <th>Status</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="claims-body">
+          <tr><td colspan="9" class="loading">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script>
+const API = 'http://localhost:5000/api';
+let allClaims = [];
+let activeFilter = 'ALL';
+
+async function loadClaims() {
+  try {
+    const res = await fetch(`${API}/claims`);
+    allClaims = await res.json();
+    renderClaims();
+  } catch(e) {
+    document.getElementById('claims-body').innerHTML =
+      '<tr><td colspan="9" class="loading">Could not connect to backend server.</td></tr>';
+  }
+}
+
+function renderClaims() {
+  const data = activeFilter === 'ALL' ? allClaims :
+    allClaims.filter(c => c.CLAIM_STATUS === activeFilter);
+  const tbody = document.getElementById('claims-body');
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="loading">No records found.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(c => {
+    const statusClass = c.CLAIM_STATUS === 'Approved' ? 'green' :
+                        c.CLAIM_STATUS === 'Rejected' ? 'red' : 'amber';
+    const actionBtn = c.CLAIM_STATUS === 'Pending'
+      ? `<button class="btn btn-sm btn-primary" onclick="approveClaim(${c.CLAIM_ID})">Approve</button>`
+      : '—';
+    return `<tr>
+      <td>${c.CLAIM_ID}</td>
+      <td>${c.FARMER_NAME}</td>
+      <td>${c.DISTRICT}</td>
+      <td>${c.CLAIM_DATE}</td>
+      <td>${c.RAINFALL}</td>
+      <td>₹${Number(c.SUM_INSURED).toLocaleString('en-IN')}</td>
+      <td>${c.PAYOUT_AMOUNT ? '₹'+Number(c.PAYOUT_AMOUNT).toLocaleString('en-IN') : '—'}</td>
+      <td><span class="status-badge ${statusClass}">${c.CLAIM_STATUS}</span></td>
+      <td>${actionBtn}</td>
+    </tr>`;
+  }).join('');
+}
+
+function filterStatus(status, btn) {
+  activeFilter = status;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderClaims();
+}
+
+async function approveClaim(id) {
+  try {
+    const res = await fetch(`${API}/claims/approve/${id}`, { method: 'PUT' });
+    const d = await res.json();
+    alert(d.message);
+    loadClaims();
+  } catch(e) { alert('Server not reachable.'); }
+}
+
+loadClaims();
+</script>
+</body>
+</html>
