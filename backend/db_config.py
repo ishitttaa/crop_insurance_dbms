@@ -1,20 +1,10 @@
-import cx_Oracle
-
-# ── Change these values to match your Oracle setup ──────────
-DB_USER     = "SYSTEM"
-DB_PASSWORD = "Oracle123"   # whatever you set during installation
-DB_DSN      = "localhost/XE"
-# ────────────────────────────────────────────────────────────
+import mysql.connector
 
 def get_connection():
-    """Returns a fresh Oracle DB connection."""
-    try:
-        conn = cx_Oracle.connect(
-            user=DB_USER,
-            password=DB_PASSWORD,
-            dsn=DB_DSN
-        )
-        return conn
-    except cx_Oracle.DatabaseError as e:
-        print(f"Database connection failed: {e}")
-        raise
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="DBMS123",   # <-- apna actual MySQL password
+        database="crop_insurance_db",
+        port=3306
+    )

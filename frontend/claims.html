@@ -1,121 +1,143 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Claims — Crop Insurance System</title>
-<link rel="stylesheet" href="style.css"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Claims — Crop Insurance System</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
 
-<nav class="navbar">
-  <div class="nav-brand">
-    <div class="nav-logo">CI</div>
-    <span>Crop Insurance System</span>
-  </div>
-  <div class="nav-links">
-    <a href="index.html">Dashboard</a>
-    <a href="farmers.html">Farmers</a>
-    <a href="claims.html" class="active">Claims</a>
-  </div>
-</nav>
-
-<main class="container">
-  <div class="page-header">
-    <h1>Insurance Claims</h1>
-    <p>All claims generated — including auto-triggered claims from weather events</p>
-  </div>
-
-  <!-- Filter bar -->
-  <div class="card filter-bar">
-    <label>Filter by status:</label>
-    <button class="filter-btn active" onclick="filterStatus('ALL', this)">All</button>
-    <button class="filter-btn" onclick="filterStatus('Pending', this)">Pending</button>
-    <button class="filter-btn" onclick="filterStatus('Approved', this)">Approved</button>
-    <button class="filter-btn" onclick="filterStatus('Rejected', this)">Rejected</button>
-  </div>
-
-  <div class="card">
-    <div class="card-header">Claims List</div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Claim ID</th><th>Farmer</th><th>District</th>
-            <th>Date</th><th>Rainfall (mm)</th>
-            <th>Sum Insured (₹)</th><th>Payout (₹)</th>
-            <th>Status</th><th>Action</th>
-          </tr>
-        </thead>
-        <tbody id="claims-body">
-          <tr><td colspan="9" class="loading">Loading...</td></tr>
-        </tbody>
-      </table>
+  <nav class="navbar">
+    <div class="nav-brand">
+      <div class="nav-logo">CI</div>
+      <span>Crop Insurance System</span>
     </div>
-  </div>
-</main>
+    <div class="nav-links">
+      <a href="index.html">Dashboard</a>
+      <a href="farmers.html">Farmers</a>
+      <a href="claims.html" class="active">Claims</a>
+    </div>
+  </nav>
 
-<script>
-const API = 'http://localhost:5000/api';
-let allClaims = [];
-let activeFilter = 'ALL';
+  <main class="container">
+    <div class="page-header">
+      <h1>Insurance Claims</h1>
+      <p>All claims generated — including auto-triggered claims from weather events</p>
+    </div>
 
-async function loadClaims() {
-  try {
-    const res = await fetch(`${API}/claims`);
-    allClaims = await res.json();
-    renderClaims();
-  } catch(e) {
-    document.getElementById('claims-body').innerHTML =
-      '<tr><td colspan="9" class="loading">Could not connect to backend server.</td></tr>';
-  }
-}
+    <div class="card filter-bar">
+      <label>Filter by status:</label>
+      <button class="filter-btn active" onclick="filterStatus('ALL', this)">All</button>
+      <button class="filter-btn" onclick="filterStatus('Pending', this)">Pending</button>
+      <button class="filter-btn" onclick="filterStatus('Approved', this)">Approved</button>
+      <button class="filter-btn" onclick="filterStatus('Rejected', this)">Rejected</button>
+    </div>
 
-function renderClaims() {
-  const data = activeFilter === 'ALL' ? allClaims :
-    allClaims.filter(c => c.CLAIM_STATUS === activeFilter);
-  const tbody = document.getElementById('claims-body');
-  if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="9" class="loading">No records found.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = data.map(c => {
-    const statusClass = c.CLAIM_STATUS === 'Approved' ? 'green' :
-                        c.CLAIM_STATUS === 'Rejected' ? 'red' : 'amber';
-    const actionBtn = c.CLAIM_STATUS === 'Pending'
-      ? `<button class="btn btn-sm btn-primary" onclick="approveClaim(${c.CLAIM_ID})">Approve</button>`
-      : '—';
-    return `<tr>
-      <td>${c.CLAIM_ID}</td>
-      <td>${c.FARMER_NAME}</td>
-      <td>${c.DISTRICT}</td>
-      <td>${c.CLAIM_DATE}</td>
-      <td>${c.RAINFALL}</td>
-      <td>₹${Number(c.SUM_INSURED).toLocaleString('en-IN')}</td>
-      <td>${c.PAYOUT_AMOUNT ? '₹'+Number(c.PAYOUT_AMOUNT).toLocaleString('en-IN') : '—'}</td>
-      <td><span class="status-badge ${statusClass}">${c.CLAIM_STATUS}</span></td>
-      <td>${actionBtn}</td>
-    </tr>`;
-  }).join('');
-}
+    <div class="card">
+      <div class="card-header">Claims List</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Claim ID</th>
+              <th>Farmer</th>
+              <th>District</th>
+              <th>Date</th>
+              <th>Rainfall (mm)</th>
+              <th>Sum Insured (₹)</th>
+              <th>Payout (₹)</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="claims-body">
+            <tr>
+              <td colspan="9" class="loading">Loading...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
 
-function filterStatus(status, btn) {
-  activeFilter = status;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderClaims();
-}
+  <script>
+    const API = "http://localhost:5000/api";
+    let claims = [];
+    let activeFilter = "ALL";
 
-async function approveClaim(id) {
-  try {
-    const res = await fetch(`${API}/claims/approve/${id}`, { method: 'PUT' });
-    const d = await res.json();
-    alert(d.message);
+    async function loadClaims() {
+      try {
+        const res = await fetch(`${API}/claims`);
+        claims = await res.json();
+        console.log("CLAIMS DATA:", claims);
+        renderClaims();
+      } catch (e) {
+        document.getElementById("claims-body").innerHTML =
+          `<tr><td colspan="9" class="loading">Could not connect to backend server.</td></tr>`;
+      }
+    }
+
+    function renderClaims() {
+      const tbody = document.getElementById("claims-body");
+
+      const data = activeFilter === "ALL"
+        ? claims
+        : claims.filter(c => c.claim_status === activeFilter);
+
+      if (!data.length) {
+        tbody.innerHTML = `<tr><td colspan="9" class="loading">No claims found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = data.map(c => {
+        const statusClass =
+          c.claim_status === "Approved" ? "green" :
+            c.claim_status === "Rejected" ? "red" : "amber";
+
+        const actionBtn = c.claim_status === "Pending"
+          ? `<button class="btn btn-sm btn-primary" onclick="approveClaim(${c.claim_id})">Approve</button>`
+          : "—";
+
+        return `
+      <tr>
+        <td>${c.claim_id}</td>
+        <td>${c.farmer_name}</td>
+        <td>${c.district}</td>
+        <td>${c.claim_date}</td>
+        <td>${c.rainfall}</td>
+        <td>₹${Number(c.sum_insured || 0).toLocaleString("en-IN")}</td>
+        <td>${c.payout_amount ? "₹" + Number(c.payout_amount).toLocaleString("en-IN") : "—"}</td>
+        <td><span class="status-badge ${statusClass}">${c.claim_status}</span></td>
+        <td>${actionBtn}</td>
+      </tr>
+    `;
+      }).join("");
+    }
+
+    function filterStatus(status, btn) {
+      activeFilter = status;
+      document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      renderClaims();
+    }
+
+    async function approveClaim(id) {
+      try {
+        const res = await fetch(`${API}/claims/approve/${id}`, { method: "PUT" });
+        const d = await res.json();
+        alert(d.message);
+        loadClaims();
+      } catch (e) {
+        alert("Server not reachable.");
+      }
+    }
+
     loadClaims();
-  } catch(e) { alert('Server not reachable.'); }
-}
+  </script>
 
-loadClaims();
-</script>
 </body>
+
 </html>

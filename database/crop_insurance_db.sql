@@ -52,17 +52,21 @@ CREATE TABLE WEATHER_EVENT (
 
 -- 5. MANDI_PRICE  (FK → CROP)
 CREATE TABLE MANDI_PRICE (
-    Price_ID     INT    PRIMARY KEY AUTO_INCREMENT,
-    Date         DATE   NOT NULL,
-    District     VARCHAR(60)  NOT NULL,
-    Min_Price    FLOAT  NOT NULL CHECK (Min_Price >= 0),
-    Max_Price    FLOAT  NOT NULL CHECK (Max_Price >= Min_Price),
-    Modal_Price  FLOAT  NOT NULL CHECK (Modal_Price >= 0),
-    Crop_ID      INT    NOT NULL,
-    FOREIGN KEY (Crop_ID) REFERENCES CROP(Crop_ID)
-        ON DELETE RESTRICT ON UPDATE CASCADE
-);
+    Price_ID INT PRIMARY KEY AUTO_INCREMENT,
+    Price_Date DATE NOT NULL,
+    District VARCHAR(60) NOT NULL,
+    Min_Price FLOAT NOT NULL,
+    Max_Price FLOAT NOT NULL,
+    Modal_Price FLOAT NOT NULL,
+    Crop_ID INT NOT NULL,
 
+    CONSTRAINT chk_min_price CHECK (Min_Price >= 0),
+    CONSTRAINT chk_max_price CHECK (Max_Price >= Min_Price),
+    CONSTRAINT chk_modal_price CHECK (Modal_Price >= 0),
+
+    FOREIGN KEY (Crop_ID) REFERENCES CROP(Crop_ID)
+    ON DELETE RESTRICT ON UPDATE CASCADE
+);
 -- 6. INSURANCE_POLICY  (FK → FARMER)
 CREATE TABLE INSURANCE_POLICY (
     Policy_ID    INT    PRIMARY KEY AUTO_INCREMENT,
@@ -178,7 +182,7 @@ INSERT INTO WEATHER_EVENT (Date, District, Rainfall, Temperature) VALUES
 ('2024-10-01', 'Nashik',      15.0, 25.0);   -- below 50mm → triggers claim
 
 -- Mandi Prices
-INSERT INTO MANDI_PRICE (Date, District, Min_Price, Max_Price, Modal_Price, Crop_ID) VALUES
+INSERT INTO MANDI_PRICE (Price_Date, District, Min_Price, Max_Price, Modal_Price, Crop_ID) VALUES
 -- Onion (Crop_ID=3, MSP=800) — price crash scenario (Nashik 2024)
 ('2024-09-01', 'Nashik',       100.00,  300.00,  180.00, 3),
 ('2024-09-08', 'Nashik',        80.00,  200.00,  120.00, 3),
@@ -244,7 +248,7 @@ SELECT
     c.Crop_Name,
     c.MSP,
     m.District,
-    m.Date,
+    m.Price_Date,
     m.Min_Price,
     m.Max_Price,
     m.Modal_Price,
@@ -306,45 +310,46 @@ GROUP BY f.Farmer_ID, f.Name, f.District, f.Land_Area;
 -- SECTION 4 : PL/SQL  –  STORED PROCEDURE
 -- ============================================================
 
+
+
 DELIMITER //
 
--- Procedure 1: Generate price trend report for a crop
 CREATE PROCEDURE Get_Price_Trend_Report(IN p_crop_id INT)
 BEGIN
-    SELECT
-        Date,
-        District,
-        Min_Price,
-        Max_Price,
-        Modal_Price,
-        Price_Status,
-        Price_Pct_of_MSP
-    FROM Price_Volatility_View
-    WHERE Crop_ID = p_crop_id
-    ORDER BY Date DESC;
+    SELECT 
+        mp.Price_Date,
+        mp.District,
+        mp.Min_Price,
+        mp.Max_Price,
+        mp.Modal_Price,
+        CASE 
+            WHEN mp.Modal_Price < c.MSP THEN 'Below MSP'
+            ELSE 'Normal'
+        END AS Price_Status,
+        ROUND((mp.Modal_Price / c.MSP) * 100, 2) AS Price_Pct_of_MSP
+    FROM MANDI_PRICE mp
+    JOIN CROP c ON mp.Crop_ID = c.Crop_ID
+    WHERE mp.Crop_ID = p_crop_id
+    ORDER BY mp.Price_Date DESC;
 END //
+
+DELIMITER ;
 
 -- Procedure 2: Bulk approve all pending claims for a district
+
+DELIMITER //
+
 CREATE PROCEDURE Approve_Claims_By_District(IN p_district VARCHAR(60))
 BEGIN
-    DECLARE EXIT HANDLER FOR SQLEXCEPTION
-    BEGIN
-        ROLLBACK;
-        SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Error during bulk approval. Transaction rolled back.';
-    END;
-
-    START TRANSACTION;
-        UPDATE CLAIM cl
-        JOIN INSURANCE_POLICY ip ON cl.Policy_ID = ip.Policy_ID
-        JOIN FARMER f             ON ip.Farmer_ID = f.Farmer_ID
-        SET cl.Claim_Status = 'Approved'
-        WHERE cl.Claim_Status = 'Pending'
-          AND f.District = p_district;
-    COMMIT;
-
-    SELECT ROW_COUNT() AS Claims_Approved;
+    UPDATE CLAIM cl
+    JOIN INSURANCE_POLICY ip ON cl.Policy_ID = ip.Policy_ID
+    JOIN FARMER f ON ip.Farmer_ID = f.Farmer_ID
+    SET cl.Claim_Status = 'Approved'
+    WHERE f.District = p_district
+      AND cl.Claim_Status = 'Pending';
 END //
+
+DELIMITER ;
 
 -- Procedure 3: Register a new farmer with a crop (transaction demo)
 CREATE PROCEDURE Register_Farmer_With_Crop(
@@ -532,7 +537,7 @@ DELIMITER ;
 -- ============================================================
 
 -- Q1: All price-distress records (modal < 80% of MSP)
-SELECT Crop_Name, District, Date, Modal_Price, MSP, Price_Status
+SELECT Crop_Name, District, Price_Date, Modal_Price, MSP, Price_Status
 FROM Price_Volatility_View
 WHERE Price_Status IN ('DISTRESS', 'SEVERE DISTRESS')
 ORDER BY Price_Pct_of_MSP ASC;
@@ -614,7 +619,7 @@ SELECT DISTINCT f.Name, f.District
 FROM FARMER f
 JOIN FARMER_CROP fc ON f.Farmer_ID = fc.Farmer_ID
 WHERE fc.Crop_ID IN (
-    SELECT DISTINCT Crop_ID
+    SELECT DISTINCT mp.Crop_ID
     FROM MANDI_PRICE mp
     JOIN CROP c ON mp.Crop_ID = c.Crop_ID
     WHERE mp.Modal_Price < c.MSP
@@ -674,8 +679,9 @@ WHERE Farmer_ID = 1;
 
 -- Delete: Remove expired policies (safe because no active claims)
 DELETE FROM INSURANCE_POLICY
-WHERE End_Date < CURDATE()
-  AND Policy_ID NOT IN (SELECT DISTINCT Policy_ID FROM CLAIM);
+WHERE Policy_ID > 0
+AND End_Date < CURDATE()
+AND Policy_ID NOT IN (SELECT DISTINCT Policy_ID FROM CLAIM);
 
 
 -- ============================================================
@@ -737,7 +743,7 @@ SELECT Calculate_Payout(1, 10.0) AS Estimated_Payout_Policy1;
 -- SECTION 11 : VERIFY ALL VIEWS
 -- ============================================================
 
-SELECT * FROM Price_Volatility_View    ORDER BY Date DESC;
+SELECT * FROM Price_Volatility_View    ORDER BY Price_Date DESC;
 SELECT * FROM Claim_Detail_View        ORDER BY Claim_ID;
 SELECT * FROM Farmer_Portfolio_View    ORDER BY Farmer_ID;
 SELECT * FROM CLAIM_AUDIT;
