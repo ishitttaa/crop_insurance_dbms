@@ -73,7 +73,7 @@ body {
 /* ── LAYOUT ── */
 .container { max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
 
-.page-header { margin-bottom: 24px; }
+.page-header { margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-end; }
 .page-header h1 { font-size: 24px; font-weight: 600; color: var(--text); }
 .page-header p  { color: var(--muted); font-size: 14px; margin-top: 2px; }
 
@@ -218,6 +218,7 @@ tbody tr:hover { background: #fafaf8; }
 }
 .btn:hover { opacity: 0.85; }
 .btn-primary { background: var(--green); color: white; }
+.btn-secondary { background: var(--blue); color: white; margin: 0; }
 .btn-sm { padding: 5px 12px; font-size: 12px; margin: 0; }
 
 /* ── MESSAGES ── */

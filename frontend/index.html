@@ -25,8 +25,14 @@
 
   <main class="container">
     <div class="page-header">
-      <h1>Dashboard Overview</h1>
-      <p>Integrated Crop Price Volatility &amp; Insurance Claim Analysis</p>
+      <div>
+        <h1>Dashboard Overview</h1>
+        <p>Integrated Crop Price Volatility &amp; Insurance Claim Analysis</p>
+      </div>
+      <button class="btn btn-secondary" id="sync-btn" onclick="syncRealTimeData()">
+        <span id="sync-text">Sync Real-time Data</span>
+        <span id="sync-loader" style="display:none">Syncing...</span>
+      </button>
     </div>
 
     <div class="stats-grid">
@@ -242,6 +248,37 @@
         }
       } catch (e) {
         showMsg('weather-msg', 'Server not reachable.', 'error');
+      }
+    }
+
+    async function syncRealTimeData() {
+      const btn = document.getElementById('sync-btn');
+      const text = document.getElementById('sync-text');
+      const loader = document.getElementById('sync-loader');
+
+      btn.disabled = true;
+      text.style.display = 'none';
+      loader.style.display = 'inline';
+
+      try {
+        const res = await fetch(`${API}/sync`, { method: 'POST' });
+        const d = await res.json();
+
+        if (res.ok) {
+          const stats = d.stats;
+          alert(`Sync Complete!\nWeather Updated: ${stats.weather} districts\nPrices Updated: ${stats.prices} crops\nErrors: ${stats.errors.length}`);
+          loadStats();
+          loadDistressChart();
+          loadDistressTable();
+        } else {
+          alert("Sync Failed: " + (d.error || "Unknown error"));
+        }
+      } catch (e) {
+        alert("Server error during sync.");
+      } finally {
+        btn.disabled = false;
+        text.style.display = 'inline';
+        loader.style.display = 'none';
       }
     }
 

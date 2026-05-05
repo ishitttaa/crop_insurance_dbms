@@ -3,6 +3,7 @@ from flask_cors import CORS
 from db_config import get_connection
 from datetime import date, datetime
 from decimal import Decimal
+from external_data import fetch_weather, fetch_crop_prices
 
 app = Flask(__name__)
 CORS(app)
@@ -211,6 +212,72 @@ def get_schemes():
     cursor.close()
     conn.close()
     return jsonify(data)
+
+@app.route('/api/sync', methods=['POST'])
+
+def sync_data():
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    sync_results = {
+        "weather": 0,
+        "prices": 0,
+        "errors": []
+    }
+
+    try:
+        # 1. Sync Weather for all districts in FARMER table
+        cursor.execute("SELECT DISTINCT District FROM FARMER")
+        districts = [row[0] for row in cursor.fetchall()]
+        
+        for district in districts:
+            rainfall, temp = fetch_weather(district)
+            if rainfall is not None:
+                cursor.execute("""
+                    INSERT INTO WEATHER_EVENT (Date, District, Rainfall, Temperature)
+                    VALUES (%s, %s, %s, %s)
+                """, (datetime.now().date(), district, rainfall, temp))
+                sync_results["weather"] += 1
+            else:
+                sync_results["errors"].append(f"Failed to fetch weather for {district}")
+
+        # 2. Sync Prices for all crops in CROP table across all districts
+        cursor.execute("SELECT Crop_ID, Crop_Name FROM CROP")
+        crops = cursor.fetchall()
+        
+        for crop_id, crop_name in crops:
+            # For each crop, fetch price for each district where it's grown
+            cursor.execute("""
+                SELECT DISTINCT District FROM FARMER f
+                JOIN FARMER_CROP fc ON f.Farmer_ID = fc.Farmer_ID
+                WHERE fc.Crop_ID = %s
+            """, (crop_id,))
+            crop_districts = [row[0] for row in cursor.fetchall()]
+            
+            for district in crop_districts:
+                min_p, max_p, modal_p = fetch_crop_prices(crop_name, district)
+                if modal_p is not None:
+                    cursor.execute("""
+                        INSERT INTO MANDI_PRICE (Price_Date, District, Min_Price, Max_Price, Modal_Price, Crop_ID)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                    """, (datetime.now().date(), district, min_p, max_p, modal_p, crop_id))
+                    sync_results["prices"] += 1
+                else:
+                    # Don't log every miss as error to keep it clean, some mandis might not have daily data
+                    pass
+
+        conn.commit()
+        return jsonify({
+            "message": "Synchronization complete",
+            "stats": sync_results
+        })
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
