@@ -1,298 +1,263 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>Crop Insurance Dashboard</title>
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Crop Insurance Dashboard</title>
+    <link rel="stylesheet" href="dashboard.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-
 <body>
 
-  <nav class="navbar">
-    <div class="nav-brand">
-      <div class="nav-logo">CI</div>
-      <span>Crop Insurance System</span>
-    </div>
-    <div class="nav-links">
-      <a href="index.html" class="active">Dashboard</a>
-      <a href="farmers.html">Farmers</a>
-      <a href="claims.html">Claims</a>
-    </div>
-  </nav>
-
-  <main class="container">
-    <div class="page-header">
-      <div>
-        <h1>Dashboard Overview</h1>
-        <p>Integrated Crop Price Volatility &amp; Insurance Claim Analysis</p>
-      </div>
-      <button class="btn btn-secondary" id="sync-btn" onclick="syncRealTimeData()">
-        <span id="sync-text">Sync Real-time Data</span>
-        <span id="sync-loader" style="display:none">Syncing...</span>
-      </button>
-    </div>
-
-    <div class="stats-grid">
-      <div class="stat-card blue">
-        <div class="stat-label">Total Farmers</div>
-        <div class="stat-value" id="stat-farmers">—</div>
-      </div>
-      <div class="stat-card amber">
-        <div class="stat-label">Pending Claims</div>
-        <div class="stat-value" id="stat-pending">—</div>
-      </div>
-      <div class="stat-card green">
-        <div class="stat-label">Approved Claims</div>
-        <div class="stat-value" id="stat-approved">—</div>
-      </div>
-      <div class="stat-card red">
-        <div class="stat-label">Price Distress Records</div>
-        <div class="stat-value" id="stat-distress">—</div>
-      </div>
-      <div class="stat-card teal">
-        <div class="stat-label">Total Payout (₹)</div>
-        <div class="stat-value" id="stat-payout">—</div>
-      </div>
-      <div class="stat-card purple">
-        <div class="stat-label">Total Claims</div>
-        <div class="stat-value" id="stat-claims">—</div>
-      </div>
-    </div>
-
-    <div class="charts-row">
-      <div class="card chart-card">
-        <div class="card-header">Price Distress Records by Crop</div>
-        <canvas id="distressChart" height="220"></canvas>
-      </div>
-      <div class="card chart-card">
-        <div class="card-header">Scheme Enrollment</div>
-        <canvas id="schemeChart" height="220"></canvas>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-header">Add Weather Event <span class="badge">Auto-triggers claims</span></div>
-      <div class="form-grid">
-        <div class="form-group"><label>Date</label><input type="date" id="w-date" /></div>
-        <div class="form-group"><label>District</label><input type="text" id="w-district" placeholder="e.g. Vidisha" />
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-icon"><i class="fas fa-wheat-awn text-white"></i></div>
+            <span>CropGuard AI</span>
         </div>
-        <div class="form-group"><label>Rainfall (mm)</label><input type="number" id="w-rainfall"
-            placeholder="e.g. 18" /></div>
-        <div class="form-group"><label>Temperature (°C)</label><input type="number" id="w-temp" placeholder="e.g. 32" />
+        <ul class="nav-menu">
+            <li class="nav-item"><a href="index.html" class="nav-link active"><i class="fas fa-home"></i> <span>Dashboard</span></a></li>
+            <li class="nav-item"><a href="#" class="nav-link"><i class="fas fa-users"></i> <span>Farmers</span></a></li>
+            <li class="nav-item"><a href="#" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> <span>Claims</span></a></li>
+            <li class="nav-item"><a href="#" class="nav-link"><i class="fas fa-chart-line"></i> <span>Market Trends</span></a></li>
+            <li class="nav-item"><a href="#" class="nav-link"><i class="fas fa-cog"></i> <span>Settings</span></a></li>
+        </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="header">
+            <div class="welcome-text">
+                <h1>Agricultural Intelligence Dashboard</h1>
+                <p>Monitoring farmer welfare, price volatility, and insurance claim eligibility.</p>
+            </div>
+            <button class="sync-btn" id="sync-btn" onclick="syncRealTimeData()">
+                <i class="fas fa-sync" id="sync-icon"></i>
+                <span id="sync-text">Sync Live Data</span>
+            </button>
+        </header>
+
+        <!-- Stats Overview -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon bg-blue"><i class="fas fa-user-friends"></i></div>
+                <div class="stat-value" id="stat-farmers">0</div>
+                <div class="stat-label">Total Farmers</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon bg-amber"><i class="fas fa-clock"></i></div>
+                <div class="stat-value" id="stat-pending">0</div>
+                <div class="stat-label">Pending Claims</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon bg-rose"><i class="fas fa-triangle-exclamation"></i></div>
+                <div class="stat-value" id="stat-distress">0</div>
+                <div class="stat-label">Price Distress Events</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon bg-emerald"><i class="fas fa-hand-holding-dollar"></i></div>
+                <div class="stat-value" id="stat-payout">₹0</div>
+                <div class="stat-label">Total Payout Disbursed</div>
+            </div>
         </div>
-      </div>
-      <button class="btn btn-primary" onclick="submitWeather()">Submit Weather Event</button>
-      <div id="weather-msg" class="msg"></div>
-    </div>
 
-    <div class="card">
-      <div class="card-header">Recent Price Distress Records</div>
-      <div class="table-wrap">
-        <table id="distress-table">
-          <thead>
-            <tr>
-              <th>Crop</th>
-              <th>District</th>
-              <th>Date</th>
-              <th>Modal Price (₹)</th>
-              <th>MSP (₹)</th>
-              <th>% of MSP</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="distress-body"></tbody>
-        </table>
-      </div>
-    </div>
-  </main>
+        <div class="dashboard-grid">
+            <!-- Left Column -->
+            <div class="left-col">
+                <!-- Farmer Analysis (Distress & Eligibility) -->
+                <div class="card">
+                    <div class="card-title">
+                        Farmer Welfare & Eligibility Matrix
+                        <span class="badge badge-info" id="farmer-count-badge">0 Farmers Analyzed</span>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Farmer Name</th>
+                                    <th>District</th>
+                                    <th>Status</th>
+                                    <th>Eligible Schemes</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="analysis-body">
+                                <tr><td colspan="5" style="text-align:center; padding:2rem;">Loading analysis data...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
-  <script>
-    const API = 'http://localhost:5000/api';
-    let distressChartInstance = null;
-    let schemeChartInstance = null;
+                <!-- Government Schemes Directory -->
+                <div class="card">
+                    <div class="card-title">Active Government Schemes</div>
+                    <div class="scheme-grid" id="scheme-directory">
+                        <!-- Schemes will be loaded here -->
+                    </div>
+                </div>
+            </div>
 
-    async function loadStats() {
-      try {
-        const res = await fetch(`${API}/stats`);
-        const d = await res.json();
+            <!-- Right Column -->
+            <div class="right-col">
+                <!-- Distress Alerts -->
+                <div class="card">
+                    <div class="card-title" style="color: var(--danger);">
+                        Critical Distress Alerts
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <ul class="alert-list" id="distress-alerts">
+                        <!-- Alerts will be loaded here -->
+                    </ul>
+                </div>
 
-        document.getElementById('stat-farmers').textContent = d.total_farmers ?? 0;
-        document.getElementById('stat-pending').textContent = d.pending_claims ?? 0;
-        document.getElementById('stat-approved').textContent = d.approved_claims ?? 0;
-        document.getElementById('stat-distress').textContent = d.distress_records ?? 0;
-        document.getElementById('stat-claims').textContent = d.total_claims ?? 0;
-        document.getElementById('stat-payout').textContent = '₹' + Number(d.total_payout || 0).toLocaleString('en-IN');
-      } catch (e) {
-        console.error("Stats error:", e);
-      }
-    }
+                <!-- Scheme Enrollment Chart -->
+                <div class="card">
+                    <div class="card-title">Scheme Enrollment</div>
+                    <canvas id="schemeChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+    </main>
 
-    async function loadDistressChart() {
-      try {
-        const res = await fetch(`${API}/prices/distress`);
-        const data = await res.json();
+    <script>
+        const API = 'http://localhost:5000/api';
+        let schemeChartInstance = null;
 
-        const counts = {};
-        data.forEach(r => {
-          const crop = r.crop_name || 'Unknown';
-          counts[crop] = (counts[crop] || 0) + 1;
-        });
-
-        if (distressChartInstance) distressChartInstance.destroy();
-
-        distressChartInstance = new Chart(document.getElementById('distressChart'), {
-          type: 'bar',
-          data: {
-            labels: Object.keys(counts),
-            datasets: [{
-              label: 'Distress Days',
-              data: Object.values(counts),
-              backgroundColor: ['#E24B4A', '#BA7517', '#185FA5', '#0F6E56', '#534AB7', '#993C1D']
-            }]
-          },
-          options: {
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true } }
-          }
-        });
-      } catch (e) {
-        console.error("Distress chart error:", e);
-      }
-    }
-
-    async function loadSchemeChart() {
-      try {
-        const res = await fetch(`${API}/schemes`);
-        const data = await res.json();
-
-        if (schemeChartInstance) schemeChartInstance.destroy();
-
-        schemeChartInstance = new Chart(document.getElementById('schemeChart'), {
-          type: 'doughnut',
-          data: {
-            labels: data.map(r => r.scheme_name || r.Scheme_Name || 'Unknown'),
-            datasets: [{
-              data: data.map(r => r.farmers_enrolled || r.Farmers_Enrolled || 0),
-              backgroundColor: ['#185FA5', '#0F6E56', '#534AB7', '#854F0B']
-            }]
-          },
-          options: { plugins: { legend: { position: 'bottom' } } }
-        });
-      } catch (e) {
-        console.error("Scheme chart error:", e);
-      }
-    }
-
-    async function loadDistressTable() {
-      try {
-        const res = await fetch(`${API}/prices/distress`);
-        const data = await res.json();
-        const tbody = document.getElementById('distress-body');
-
-        if (!data.length) {
-          tbody.innerHTML = `<tr><td colspan="7" class="loading">No distress records found.</td></tr>`;
-          return;
+        async function init() {
+            loadStats();
+            loadFarmerAnalysis();
+            loadSchemes();
+            loadSchemeChart();
         }
 
-        tbody.innerHTML = data.slice(0, 10).map(r => {
-          const status = r.price_status || 'UNKNOWN';
-          const statusClass = status === 'SEVERE DISTRESS' ? 'red' : 'amber';
-
-          return `
-        <tr>
-          <td>${r.crop_name || ''}</td>
-          <td>${r.district || ''}</td>
-          <td>${r.price_date || ''}</td>
-          <td>₹${Number(r.modal_price || 0).toLocaleString('en-IN')}</td>
-          <td>₹${Number(r.msp || 0).toLocaleString('en-IN')}</td>
-          <td>${r.price_pct_of_msp ?? 0}%</td>
-          <td><span class="status-badge ${statusClass}">${status}</span></td>
-        </tr>
-      `;
-        }).join('');
-      } catch (e) {
-        console.error("Distress table error:", e);
-      }
-    }
-
-    async function submitWeather() {
-      const payload = {
-        date: document.getElementById('w-date').value,
-        district: document.getElementById('w-district').value,
-        rainfall: document.getElementById('w-rainfall').value,
-        temperature: document.getElementById('w-temp').value
-      };
-
-      if (!payload.date || !payload.district || !payload.rainfall || !payload.temperature) {
-        showMsg('weather-msg', 'Please fill all fields.', 'error');
-        return;
-      }
-
-      try {
-        const res = await fetch(`${API}/weather`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        const d = await res.json();
-        showMsg('weather-msg', d.message || d.error, res.ok ? 'success' : 'error');
-
-        if (res.ok) {
-          loadStats();
-          loadDistressChart();
-          loadDistressTable();
+        async function loadStats() {
+            try {
+                const res = await fetch(`${API}/stats`);
+                const d = await res.json();
+                document.getElementById('stat-farmers').textContent = d.total_farmers || 0;
+                document.getElementById('stat-pending').textContent = d.pending_claims || 0;
+                document.getElementById('stat-distress').textContent = d.distress_records || 0;
+                document.getElementById('stat-payout').textContent = '₹' + Number(d.total_payout || 0).toLocaleString('en-IN');
+            } catch (e) { console.error("Stats Error:", e); }
         }
-      } catch (e) {
-        showMsg('weather-msg', 'Server not reachable.', 'error');
-      }
-    }
 
-    async function syncRealTimeData() {
-      const btn = document.getElementById('sync-btn');
-      const text = document.getElementById('sync-text');
-      const loader = document.getElementById('sync-loader');
+        async function loadFarmerAnalysis() {
+            try {
+                const res = await fetch(`${API}/farmers/analysis`);
+                const data = await res.json();
+                const tbody = document.getElementById('analysis-body');
+                const alertList = document.getElementById('distress-alerts');
+                document.getElementById('farmer-count-badge').textContent = `${data.length} Farmers Analyzed`;
 
-      btn.disabled = true;
-      text.style.display = 'none';
-      loader.style.display = 'inline';
+                tbody.innerHTML = '';
+                alertList.innerHTML = '';
 
-      try {
-        const res = await fetch(`${API}/sync`, { method: 'POST' });
-        const d = await res.json();
+                data.forEach(f => {
+                    // Table Row
+                    const row = document.createElement('tr');
+                    const statusClass = f.is_under_distress ? 'badge-danger' : 'badge-success';
+                    const statusText = f.is_under_distress ? 'Under Distress' : 'Stable';
+                    
+                    const schemesHtml = f.eligible_schemes.map(s => `<span class="badge badge-info" style="margin-right:4px; margin-bottom:4px; display:inline-block;">${s}</span>`).join('');
 
-        if (res.ok) {
-          const stats = d.stats;
-          alert(`Sync Complete!\nWeather Updated: ${stats.weather} districts\nPrices Updated: ${stats.prices} crops\nErrors: ${stats.errors.length}`);
-          loadStats();
-          loadDistressChart();
-          loadDistressTable();
-        } else {
-          alert("Sync Failed: " + (d.error || "Unknown error"));
+                    row.innerHTML = `
+                        <td style="font-weight:600;">${f.name}</td>
+                        <td>${f.district}</td>
+                        <td><span class="badge ${statusClass}">${statusText}</span></td>
+                        <td>${schemesHtml}</td>
+                        <td><button class="sync-btn" style="padding:4px 8px; font-size:11px;">View Details</button></td>
+                    `;
+                    tbody.appendChild(row);
+
+                    // Alert Item
+                    if (f.is_under_distress) {
+                        const alertItem = document.createElement('li');
+                        alertItem.className = 'alert-item';
+                        alertItem.innerHTML = `
+                            <div class="alert-info">
+                                <h4>${f.name} (${f.district})</h4>
+                                <p>${f.distress_reasons.join(', ')}</p>
+                            </div>
+                        `;
+                        alertList.appendChild(alertItem);
+                    }
+                });
+
+                if (alertList.innerHTML === '') {
+                    alertList.innerHTML = '<li style="color: var(--text-muted); text-align:center; padding: 1rem;">No active distress alerts</li>';
+                }
+
+            } catch (e) { console.error("Analysis Error:", e); }
         }
-      } catch (e) {
-        alert("Server error during sync.");
-      } finally {
-        btn.disabled = false;
-        text.style.display = 'inline';
-        loader.style.display = 'none';
-      }
-    }
 
-    function showMsg(id, text, type) {
-      const el = document.getElementById(id);
-      el.textContent = text;
-      el.className = 'msg ' + type;
-    }
+        async function loadSchemes() {
+            try {
+                const res = await fetch(`${API}/schemes/all`);
+                const data = await res.json();
+                const directory = document.getElementById('scheme-directory');
+                directory.innerHTML = '';
 
-    loadStats();
-    loadDistressChart();
-    loadSchemeChart();
-    loadDistressTable();
-  </script>
+                data.forEach(s => {
+                    const card = document.createElement('div');
+                    card.className = 'scheme-card';
+                    card.innerHTML = `
+                        <h3>${s.Scheme_Name}</h3>
+                        <p><strong>Eligibility:</strong> ${s.Eligibility_Criteria}</p>
+                    `;
+                    directory.appendChild(card);
+                });
+            } catch (e) { console.error("Schemes Error:", e); }
+        }
+
+        async function loadSchemeChart() {
+            try {
+                const res = await fetch(`${API}/schemes`);
+                const data = await res.json();
+
+                if (schemeChartInstance) schemeChartInstance.destroy();
+
+                schemeChartInstance = new Chart(document.getElementById('schemeChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: data.map(r => r.Scheme_Name || 'Unknown'),
+                        datasets: [{
+                            data: data.map(r => r.Farmers_Enrolled || 0),
+                            backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#0ea5e9', '#ec4899'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } } },
+                        cutout: '70%'
+                    }
+                });
+            } catch (e) { console.error("Chart Error:", e); }
+        }
+
+        async function syncRealTimeData() {
+            const btn = document.getElementById('sync-btn');
+            const icon = document.getElementById('sync-icon');
+            btn.disabled = true;
+            icon.classList.add('fa-spin');
+
+            try {
+                const res = await fetch(`${API}/sync`, { method: 'POST' });
+                if (res.ok) {
+                    alert("Data synchronized successfully with real-time sources!");
+                    init();
+                } else {
+                    alert("Synchronization failed.");
+                }
+            } catch (e) {
+                alert("Server error during synchronization.");
+            } finally {
+                btn.disabled = false;
+                icon.classList.remove('fa-spin');
+            }
+        }
+
+        init();
+    </script>
 </body>
-
 </html>

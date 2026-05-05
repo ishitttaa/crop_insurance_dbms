@@ -214,7 +214,6 @@ def get_schemes():
     return jsonify(data)
 
 @app.route('/api/sync', methods=['POST'])
-
 def sync_data():
     conn = get_connection()
     cursor = conn.cursor()
@@ -278,6 +277,89 @@ def sync_data():
     finally:
         cursor.close()
         conn.close()
+
+@app.route('/api/farmers/analysis', methods=['GET'])
+def get_farmer_analysis():
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Get all farmers and their land area
+    cursor.execute("SELECT Farmer_ID, Name, District, Land_Area FROM FARMER")
+    farmers = cursor.fetchall()
+    
+    # Get price distress records for mapping
+    cursor.execute("""
+        SELECT District, Crop_Name, Price_Status 
+        FROM Price_Volatility_View 
+        WHERE Price_Status IN ('DISTRESS', 'SEVERE DISTRESS')
+    """)
+    distress_prices = cursor.fetchall()
+    
+    # Get active claims
+    cursor.execute("""
+        SELECT f.Farmer_ID, cl.Claim_Status 
+        FROM CLAIM cl
+        JOIN INSURANCE_POLICY ip ON cl.Policy_ID = ip.Policy_ID
+        JOIN FARMER f ON ip.Farmer_ID = f.Farmer_ID
+        WHERE cl.Claim_Status IN ('Pending', 'Approved')
+    """)
+    claims = cursor.fetchall()
+    
+    # Map distress
+    distress_map = {}
+    for district, crop, status in distress_prices:
+        if district not in distress_map:
+            distress_map[district] = []
+        distress_map[district].append(status)
+        
+    farmer_claims = {}
+    for f_id, status in claims:
+        if f_id not in farmer_claims:
+            farmer_claims[f_id] = []
+        farmer_claims[f_id].append(status)
+
+    analysis = []
+    for f_id, name, district, land in farmers:
+        # Eligibility logic
+        eligible_schemes = ["PMFBY", "Kisan Credit Card", "RKVY"]
+        if land < 2.0:
+            eligible_schemes.append("PM-KISAN")
+            
+        # Distress logic
+        is_under_distress = False
+        distress_reason = []
+        
+        if district in distress_map:
+            is_under_distress = True
+            distress_reason.append(f"Price Distress in {district}")
+            
+        if f_id in farmer_claims:
+            is_under_distress = True
+            distress_reason.append("Active Insurance Claim")
+            
+        analysis.append({
+            "farmer_id": f_id,
+            "name": name,
+            "district": district,
+            "land_area": land,
+            "eligible_schemes": eligible_schemes,
+            "is_under_distress": is_under_distress,
+            "distress_reasons": distress_reason
+        })
+        
+    cursor.close()
+    conn.close()
+    return jsonify(analysis)
+
+@app.route('/api/schemes/all', methods=['GET'])
+def get_all_schemes():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT Scheme_ID, Scheme_Name, Eligibility_Criteria FROM GOVERNMENT_SCHEME")
+    data = rows_to_json(cursor)
+    cursor.close()
+    conn.close()
+    return jsonify(data)
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
