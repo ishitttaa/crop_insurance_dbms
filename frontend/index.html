@@ -17,11 +17,11 @@
             <span>CropGuard AI</span>
         </div>
         <ul class="nav-menu">
-            <li class="nav-item"><a href="index.html" class="nav-link active"><i class="fas fa-home"></i> <span>Dashboard</span></a></li>
-            <li class="nav-item"><a href="#" class="nav-link"><i class="fas fa-users"></i> <span>Farmers</span></a></li>
-            <li class="nav-item"><a href="#" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> <span>Claims</span></a></li>
-            <li class="nav-item"><a href="#" class="nav-link"><i class="fas fa-chart-line"></i> <span>Market Trends</span></a></li>
-            <li class="nav-item"><a href="#" class="nav-link"><i class="fas fa-cog"></i> <span>Settings</span></a></li>
+            <li class="nav-item"><a href="#" class="nav-link active" onclick="showSection('dashboard')"><i class="fas fa-home"></i> <span>Dashboard</span></a></li>
+            <li class="nav-item"><a href="#" class="nav-link" onclick="showSection('farmers')"><i class="fas fa-users"></i> <span>Farmers</span></a></li>
+            <li class="nav-item"><a href="#" class="nav-link" onclick="showSection('claims')"><i class="fas fa-file-invoice-dollar"></i> <span>Claims & Weather</span></a></li>
+            <li class="nav-item"><a href="#" class="nav-link" onclick="showSection('trends')"><i class="fas fa-chart-line"></i> <span>Market Trends</span></a></li>
+            <li class="nav-item"><a href="#" class="nav-link" onclick="showSection('settings')"><i class="fas fa-cog"></i> <span>Settings</span></a></li>
         </ul>
     </aside>
 
@@ -29,8 +29,8 @@
     <main class="main-content">
         <header class="header">
             <div class="welcome-text">
-                <h1>Agricultural Intelligence Dashboard</h1>
-                <p>Monitoring farmer welfare, price volatility, and insurance claim eligibility.</p>
+                <h1 id="page-title">Agricultural Intelligence Dashboard</h1>
+                <p id="page-subtitle">Monitoring farmer welfare, price volatility, and insurance claim eligibility.</p>
             </div>
             <button class="sync-btn" id="sync-btn" onclick="syncRealTimeData()">
                 <i class="fas fa-sync" id="sync-icon"></i>
@@ -38,84 +38,107 @@
             </button>
         </header>
 
-        <!-- Stats Overview -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-icon bg-blue"><i class="fas fa-user-friends"></i></div>
-                <div class="stat-value" id="stat-farmers">0</div>
-                <div class="stat-label">Total Farmers</div>
+        <!-- Dashboard Section -->
+        <div id="dashboard-section" class="page-section active">
+            <!-- Stats Overview -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon bg-blue"><i class="fas fa-user-friends"></i></div>
+                    <div class="stat-value" id="stat-farmers">0</div>
+                    <div class="stat-label">Total Farmers</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon bg-amber"><i class="fas fa-clock"></i></div>
+                    <div class="stat-value" id="stat-pending">0</div>
+                    <div class="stat-label">Pending Claims</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon bg-rose"><i class="fas fa-triangle-exclamation"></i></div>
+                    <div class="stat-value" id="stat-distress">0</div>
+                    <div class="stat-label">Price Distress Events</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon bg-emerald"><i class="fas fa-hand-holding-dollar"></i></div>
+                    <div class="stat-value" id="stat-payout">₹0</div>
+                    <div class="stat-label">Total Payout Disbursed</div>
+                </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon bg-amber"><i class="fas fa-clock"></i></div>
-                <div class="stat-value" id="stat-pending">0</div>
-                <div class="stat-label">Pending Claims</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon bg-rose"><i class="fas fa-triangle-exclamation"></i></div>
-                <div class="stat-value" id="stat-distress">0</div>
-                <div class="stat-label">Price Distress Events</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon bg-emerald"><i class="fas fa-hand-holding-dollar"></i></div>
-                <div class="stat-value" id="stat-payout">₹0</div>
-                <div class="stat-label">Total Payout Disbursed</div>
+
+            <div class="dashboard-grid">
+                <div class="left-col">
+                    <div class="card">
+                        <div class="card-title">Farmer Welfare & Eligibility Matrix <span class="badge badge-info" id="farmer-count-badge">0 Farmers</span></div>
+                        <div class="table-container">
+                            <table>
+                                <thead><tr><th>Farmer Name</th><th>District</th><th>Status</th><th>Eligible Schemes</th></tr></thead>
+                                <tbody id="analysis-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="right-col">
+                    <div class="card">
+                        <div class="card-title" style="color: var(--danger);">Critical Distress Alerts <i class="fas fa-bell"></i></div>
+                        <ul class="alert-list" id="distress-alerts"></ul>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="dashboard-grid">
-            <!-- Left Column -->
-            <div class="left-col">
-                <!-- Farmer Analysis (Distress & Eligibility) -->
-                <div class="card">
-                    <div class="card-title">
-                        Farmer Welfare & Eligibility Matrix
-                        <span class="badge badge-info" id="farmer-count-badge">0 Farmers Analyzed</span>
-                    </div>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Farmer Name</th>
-                                    <th>District</th>
-                                    <th>Status</th>
-                                    <th>Eligible Schemes</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="analysis-body">
-                                <tr><td colspan="5" style="text-align:center; padding:2rem;">Loading analysis data...</td></tr>
-                            </tbody>
-                        </table>
+        <!-- Farmers Section -->
+        <div id="farmers-section" class="page-section">
+            <div class="card">
+                <div class="card-title">Detailed Farmer Records</div>
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>ID</th><th>Name</th><th>District</th><th>Land Area (ha)</th><th>Policies</th><th>Claims</th></tr></thead>
+                        <tbody id="farmers-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Claims Section -->
+        <div id="claims-section" class="page-section">
+            <div class="card">
+                <div class="card-title">Insurance Claims & Weather Reason</div>
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>Claim ID</th><th>Farmer</th><th>District</th><th>Status</th><th>Rainfall (mm)</th><th>Reason</th><th>Payout</th></tr></thead>
+                        <tbody id="claims-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trends Section -->
+        <div id="trends-section" class="page-section">
+            <div class="dashboard-grid">
+                <div class="left-col">
+                    <div class="card">
+                        <div class="card-title">Market Price Volatility</div>
+                        <div class="table-container">
+                            <table>
+                                <thead><tr><th>Crop</th><th>District</th><th>Modal Price</th><th>MSP</th><th>Status</th></tr></thead>
+                                <tbody id="trends-table-body"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
-
-                <!-- Government Schemes Directory -->
-                <div class="card">
-                    <div class="card-title">Active Government Schemes</div>
-                    <div class="scheme-grid" id="scheme-directory">
-                        <!-- Schemes will be loaded here -->
+                <div class="right-col">
+                    <div class="card">
+                        <div class="card-title">Scheme Enrollment</div>
+                        <canvas id="schemeChart" height="250"></canvas>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Right Column -->
-            <div class="right-col">
-                <!-- Distress Alerts -->
-                <div class="card">
-                    <div class="card-title" style="color: var(--danger);">
-                        Critical Distress Alerts
-                        <i class="fas fa-bell"></i>
-                    </div>
-                    <ul class="alert-list" id="distress-alerts">
-                        <!-- Alerts will be loaded here -->
-                    </ul>
-                </div>
-
-                <!-- Scheme Enrollment Chart -->
-                <div class="card">
-                    <div class="card-title">Scheme Enrollment</div>
-                    <canvas id="schemeChart" height="250"></canvas>
-                </div>
+        <!-- Settings Section -->
+        <div id="settings-section" class="page-section">
+            <div class="card">
+                <div class="card-title">System Settings</div>
+                <p style="padding: 1rem; color: var(--text-muted);">Database connection and synchronization settings can be configured here.</p>
             </div>
         </div>
     </main>
@@ -124,11 +147,37 @@
         const API = 'http://localhost:5000/api';
         let schemeChartInstance = null;
 
+        function showSection(sectionId) {
+            // Update Active Link
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+                if(link.getAttribute('onclick').includes(sectionId)) link.classList.add('active');
+            });
+
+            // Switch Sections
+            document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+            document.getElementById(sectionId + '-section').classList.add('active');
+
+            // Update Header
+            const titles = {
+                dashboard: ["Agricultural Intelligence Dashboard", "Monitoring farmer welfare and eligibility."],
+                farmers: ["Farmer Directory", "Comprehensive records of all registered farmers."],
+                claims: ["Claims & Weather Analysis", "Verifying claims against weather data and rainfall reasons."],
+                trends: ["Market Price Trends", "Tracking crop price volatility and MSP compliance."],
+                settings: ["Settings", "Configure your intelligence parameters."]
+            };
+            document.getElementById('page-title').textContent = titles[sectionId][0];
+            document.getElementById('page-subtitle').textContent = titles[sectionId][1];
+
+            // Load relevant data
+            if(sectionId === 'farmers') loadDetailedFarmers();
+            if(sectionId === 'claims') loadDetailedClaims();
+            if(sectionId === 'trends') { loadDetailedTrends(); loadSchemeChart(); }
+        }
+
         async function init() {
             loadStats();
             loadFarmerAnalysis();
-            loadSchemes();
-            loadSchemeChart();
         }
 
         async function loadStats() {
@@ -148,113 +197,81 @@
                 const data = await res.json();
                 const tbody = document.getElementById('analysis-body');
                 const alertList = document.getElementById('distress-alerts');
-                document.getElementById('farmer-count-badge').textContent = `${data.length} Farmers Analyzed`;
-
-                tbody.innerHTML = '';
-                alertList.innerHTML = '';
+                tbody.innerHTML = ''; alertList.innerHTML = '';
 
                 data.forEach(f => {
-                    // Table Row
-                    const row = document.createElement('tr');
                     const statusClass = f.is_under_distress ? 'badge-danger' : 'badge-success';
-                    const statusText = f.is_under_distress ? 'Under Distress' : 'Stable';
-                    
-                    const schemesHtml = f.eligible_schemes.map(s => `<span class="badge badge-info" style="margin-right:4px; margin-bottom:4px; display:inline-block;">${s}</span>`).join('');
-
-                    row.innerHTML = `
-                        <td style="font-weight:600;">${f.name}</td>
-                        <td>${f.district}</td>
-                        <td><span class="badge ${statusClass}">${statusText}</span></td>
-                        <td>${schemesHtml}</td>
-                        <td><button class="sync-btn" style="padding:4px 8px; font-size:11px;">View Details</button></td>
-                    `;
-                    tbody.appendChild(row);
-
-                    // Alert Item
+                    const schemesHtml = f.eligible_schemes.map(s => `<span class="badge badge-info" style="margin-right:4px;">${s}</span>`).join('');
+                    tbody.innerHTML += `<tr><td style="font-weight:600;">${f.name}</td><td>${f.district}</td><td><span class="badge ${statusClass}">${f.is_under_distress ? 'Distress' : 'Stable'}</span></td><td>${schemesHtml}</td></tr>`;
                     if (f.is_under_distress) {
-                        const alertItem = document.createElement('li');
-                        alertItem.className = 'alert-item';
-                        alertItem.innerHTML = `
-                            <div class="alert-info">
-                                <h4>${f.name} (${f.district})</h4>
-                                <p>${f.distress_reasons.join(', ')}</p>
-                            </div>
-                        `;
-                        alertList.appendChild(alertItem);
+                        alertList.innerHTML += `<li class="alert-item"><div class="alert-info"><h4>${f.name}</h4><p>${f.distress_reasons.join(', ')}</p></div></li>`;
                     }
                 });
-
-                if (alertList.innerHTML === '') {
-                    alertList.innerHTML = '<li style="color: var(--text-muted); text-align:center; padding: 1rem;">No active distress alerts</li>';
-                }
-
             } catch (e) { console.error("Analysis Error:", e); }
         }
 
-        async function loadSchemes() {
+        async function loadDetailedFarmers() {
             try {
-                const res = await fetch(`${API}/schemes/all`);
+                const res = await fetch(`${API}/farmers`);
                 const data = await res.json();
-                const directory = document.getElementById('scheme-directory');
-                directory.innerHTML = '';
+                const tbody = document.getElementById('farmers-table-body');
+                tbody.innerHTML = data.map(f => `<tr><td>${f.farmer_id}</td><td style="font-weight:600;">${f.name}</td><td>${f.district}</td><td>${f.land_area}</td><td>${f.total_policies}</td><td>${f.total_claims}</td></tr>`).join('');
+            } catch (e) {}
+        }
 
-                data.forEach(s => {
-                    const card = document.createElement('div');
-                    card.className = 'scheme-card';
-                    card.innerHTML = `
-                        <h3>${s.Scheme_Name}</h3>
-                        <p><strong>Eligibility:</strong> ${s.Eligibility_Criteria}</p>
-                    `;
-                    directory.appendChild(card);
-                });
-            } catch (e) { console.error("Schemes Error:", e); }
+        async function loadDetailedClaims() {
+            try {
+                const res = await fetch(`${API}/claims`);
+                const data = await res.json();
+                const tbody = document.getElementById('claims-table-body');
+                tbody.innerHTML = data.map(c => {
+                    const reason = c.rainfall < 50 ? "Low Rainfall (Drought)" : "Normal Rainfall";
+                    const statusClass = c.claim_status === 'Approved' ? 'badge-success' : 'badge-info';
+                    return `<tr><td>${c.claim_id}</td><td>${c.farmer_name}</td><td>${c.district}</td><td><span class="badge ${statusClass}">${c.claim_status}</span></td><td>${c.rainfall}mm</td><td>${reason}</td><td>₹${Number(c.payout_amount || 0).toLocaleString('en-IN')}</td></tr>`;
+                }).join('');
+            } catch (e) {}
+        }
+
+        async function loadDetailedTrends() {
+            try {
+                const res = await fetch(`${API}/prices`);
+                const data = await res.json();
+                const tbody = document.getElementById('trends-table-body');
+                tbody.innerHTML = data.map(t => {
+                    const statusClass = t.Price_Status === 'NORMAL' ? 'badge-success' : 'badge-danger';
+                    return `<tr><td style="font-weight:600;">${t.Crop_Name}</td><td>${t.District}</td><td>₹${t.Modal_Price}</td><td>₹${t.MSP}</td><td><span class="badge ${statusClass}">${t.Price_Status}</span></td></tr>`;
+                }).join('');
+            } catch (e) {}
         }
 
         async function loadSchemeChart() {
             try {
                 const res = await fetch(`${API}/schemes`);
                 const data = await res.json();
-
                 if (schemeChartInstance) schemeChartInstance.destroy();
-
                 schemeChartInstance = new Chart(document.getElementById('schemeChart'), {
                     type: 'doughnut',
                     data: {
-                        labels: data.map(r => r.Scheme_Name || 'Unknown'),
+                        labels: data.map(r => r.Scheme_Name),
                         datasets: [{
-                            data: data.map(r => r.Farmers_Enrolled || 0),
+                            data: data.map(r => r.Farmers_Enrolled),
                             backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#0ea5e9', '#ec4899'],
                             borderWidth: 0
                         }]
                     },
-                    options: {
-                        plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } } },
-                        cutout: '70%'
-                    }
+                    options: { plugins: { legend: { position: 'bottom' } }, cutout: '70%' }
                 });
-            } catch (e) { console.error("Chart Error:", e); }
+            } catch (e) {}
         }
 
         async function syncRealTimeData() {
             const btn = document.getElementById('sync-btn');
             const icon = document.getElementById('sync-icon');
-            btn.disabled = true;
-            icon.classList.add('fa-spin');
-
+            btn.disabled = true; icon.classList.add('fa-spin');
             try {
                 const res = await fetch(`${API}/sync`, { method: 'POST' });
-                if (res.ok) {
-                    alert("Data synchronized successfully with real-time sources!");
-                    init();
-                } else {
-                    alert("Synchronization failed.");
-                }
-            } catch (e) {
-                alert("Server error during synchronization.");
-            } finally {
-                btn.disabled = false;
-                icon.classList.remove('fa-spin');
-            }
+                if (res.ok) { alert("Data synced!"); init(); }
+            } finally { btn.disabled = false; icon.classList.remove('fa-spin'); }
         }
 
         init();
