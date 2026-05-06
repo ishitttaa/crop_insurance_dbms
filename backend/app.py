@@ -398,12 +398,22 @@ def register_farmer():
     conn = get_connection()
     cursor = conn.cursor()
     try:
+        # 1. Insert Farmer
         cursor.execute("""
             INSERT INTO FARMER (Name, District, Land_Area)
             VALUES (%s, %s, %s)
         """, (data['name'], data['district'], data['land_area']))
+        farmer_id = cursor.lastrowid
+        
+        # 2. Link Crop if provided
+        if data.get('crop_id'):
+            cursor.execute("""
+                INSERT INTO FARMER_CROP (Farmer_ID, Crop_ID)
+                VALUES (%s, %s)
+            """, (farmer_id, data['crop_id']))
+            
         conn.commit()
-        return jsonify({"message": "Farmer registered successfully!"})
+        return jsonify({"message": "Farmer registered successfully with crops!"})
     except Exception as e:
         conn.rollback()
         return jsonify({"error": str(e)}), 500
@@ -416,6 +426,16 @@ def get_all_schemes():
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT Scheme_ID, Scheme_Name, Eligibility_Criteria FROM GOVERNMENT_SCHEME")
+    data = rows_to_json(cursor)
+    cursor.close()
+    conn.close()
+    return jsonify(data)
+
+@app.route('/api/crops', methods=['GET'])
+def get_crops():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT Crop_ID, Crop_Name, Season FROM CROP")
     data = rows_to_json(cursor)
     cursor.close()
     conn.close()
