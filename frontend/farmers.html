@@ -1,106 +1,163 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>Farmers — Crop Insurance System</title>
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farmers - Crop Insurance System</title>
+    <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .form-card { background: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; border: 1px solid #e2e8f0; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.875rem; color: #64748b; }
+        .form-group input { width: 100%; padding: 0.625rem; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; }
+        .form-group input:focus { border-color: #6366f1; }
+    </style>
 </head>
-
 <body>
 
-  <nav class="navbar">
-    <div class="nav-brand">
-      <div class="nav-logo">CI</div>
-      <span>Crop Insurance System</span>
-    </div>
-    <div class="nav-links">
-      <a href="index.html">Dashboard</a>
-      <a href="farmers.html" class="active">Farmers</a>
-      <a href="claims.html">Claims</a>
-    </div>
-  </nav>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-icon"><i class="fas fa-wheat-awn text-white"></i></div>
+            <span>CropGuard AI</span>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item"><a href="index.html" class="nav-link"><i class="fas fa-home"></i> <span>Dashboard</span></a></li>
+            <li class="nav-item"><a href="farmers.html" class="nav-link active"><i class="fas fa-users"></i> <span>Farmers</span></a></li>
+            <li class="nav-item"><a href="#" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> <span>Claims</span></a></li>
+            <li class="nav-item"><a href="#" class="nav-link"><i class="fas fa-chart-line"></i> <span>Market Trends</span></a></li>
+        </ul>
+    </aside>
 
-  <main class="container">
-    <div class="page-header">
-      <h1>Farmer Records</h1>
-      <p>All registered farmers with their policy and claim summary</p>
-    </div>
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="header">
+            <div class="welcome-text">
+                <h1>Farmer Records</h1>
+                <p>Register new farmers and manage existing records.</p>
+            </div>
+        </header>
 
-    <div class="card">
-      <div class="card-header">
-        All Farmers
-        <input id="search" class="search-input" placeholder="Search by name or district..." oninput="renderFarmers()" />
-      </div>
+        <!-- Register New Farmer -->
+        <div class="form-card">
+            <h3 style="margin-bottom: 1rem;">Register New Farmer</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Farmer Name</label>
+                    <input type="text" id="reg-name" placeholder="Enter name">
+                </div>
+                <div class="form-group">
+                    <label>District</label>
+                    <input type="text" id="reg-district" placeholder="e.g. Vidisha">
+                </div>
+                <div class="form-group">
+                    <label>Land Area (Acres)</label>
+                    <input type="number" id="reg-land" placeholder="e.g. 3.5">
+                </div>
+            </div>
+            <button class="sync-btn" style="background-color: var(--primary); color: white;" onclick="registerFarmer()">
+                <i class="fas fa-plus"></i> Register Farmer
+            </button>
+        </div>
 
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>District</th>
-              <th>Land Area (Acres)</th>
-              <th>Policies</th>
-              <th>Claims</th>
-            </tr>
-          </thead>
-          <tbody id="farmers-body">
-            <tr>
-              <td colspan="6" class="loading">Loading...</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </main>
+        <!-- Farmers Table -->
+        <div class="card">
+            <div class="card-title">
+                All Registered Farmers
+                <input type="text" id="search" placeholder="Search..." oninput="renderFarmers()" style="padding: 0.5rem; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 0.875rem;">
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>District</th>
+                            <th>Land Area</th>
+                            <th>Policy Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="farmers-body">
+                        <!-- Loaded dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
 
-  <script>
-    const API = "http://localhost:5000/api";
-    let farmers = [];
+    <script>
+        const API = "http://localhost:5000/api";
+        let farmersData = [];
 
-    async function loadFarmers() {
-      try {
-        const res = await fetch(`${API}/farmers`);
-        farmers = await res.json();
-        console.log("FARMERS DATA:", farmers);
-        renderFarmers();
-      } catch (e) {
-        document.getElementById("farmers-body").innerHTML =
-          `<tr><td colspan="6" class="loading">Could not connect to backend server.</td></tr>`;
-      }
-    }
+        async function loadFarmers() {
+            try {
+                // Using analysis endpoint to get has_policy status
+                const res = await fetch(`${API}/farmers/analysis`);
+                farmersData = await res.json();
+                renderFarmers();
+            } catch (e) {
+                console.error("Load Error:", e);
+            }
+        }
 
-    function renderFarmers() {
-      const tbody = document.getElementById("farmers-body");
-      const q = document.getElementById("search").value.toLowerCase();
+        function renderFarmers() {
+            const tbody = document.getElementById("farmers-body");
+            const q = document.getElementById("search").value.toLowerCase();
+            
+            const filtered = farmersData.filter(f => 
+                f.name.toLowerCase().includes(q) || 
+                f.district.toLowerCase().includes(q)
+            );
 
-      const data = farmers.filter(f =>
-        String(f.name || "").toLowerCase().includes(q) ||
-        String(f.district || "").toLowerCase().includes(q)
-      );
+            tbody.innerHTML = filtered.map(f => `
+                <tr>
+                    <td>${f.farmer_id}</td>
+                    <td style="font-weight:600;">${f.name}</td>
+                    <td>${f.district}</td>
+                    <td>${f.land_area} Acres</td>
+                    <td><span class="badge ${f.has_policy ? 'badge-success' : 'badge-info'}">${f.has_policy ? 'Policy Applied' : 'No Policy'}</span></td>
+                    <td><button class="sync-btn" style="padding: 4px 10px; font-size: 11px;">Manage</button></td>
+                </tr>
+            `).join('');
+        }
 
-      if (!data.length) {
-        tbody.innerHTML = `<tr><td colspan="6" class="loading">No farmers found.</td></tr>`;
-        return;
-      }
+        async function registerFarmer() {
+            const payload = {
+                name: document.getElementById('reg-name').value,
+                district: document.getElementById('reg-district').value,
+                land_area: document.getElementById('reg-land').value
+            };
 
-      tbody.innerHTML = data.map(f => `
-    <tr>
-      <td>${f.farmer_id}</td>
-      <td>${f.name}</td>
-      <td>${f.district}</td>
-      <td>${f.land_area}</td>
-      <td><span class="badge">${f.total_policies}</span></td>
-      <td><span class="badge">${f.total_claims}</span></td>
-    </tr>
-  `).join("");
-    }
+            if(!payload.name || !payload.district || !payload.land_area) {
+                alert("Please fill all fields");
+                return;
+            }
 
-    loadFarmers();
-  </script>
+            try {
+                const res = await fetch(`${API}/farmers`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const d = await res.json();
+                if (res.ok) {
+                    alert(d.message);
+                    loadFarmers(); // Reload list
+                    // Clear fields
+                    document.getElementById('reg-name').value = '';
+                    document.getElementById('reg-district').value = '';
+                    document.getElementById('reg-land').value = '';
+                } else {
+                    alert("Error: " + d.error);
+                }
+            } catch (e) {
+                alert("Could not connect to server.");
+            }
+        }
 
+        loadFarmers();
+    </script>
 </body>
-
 </html>

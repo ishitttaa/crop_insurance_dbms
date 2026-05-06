@@ -102,16 +102,24 @@ def get_claims():
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT Claim_ID AS claim_id,
-               Farmer_Name AS farmer_name,
-               District AS district,
-               Claim_Status AS claim_status,
-               Claim_Date AS claim_date,
-               Sum_Insured AS sum_insured,
-               Rainfall AS rainfall,
-               Payout_Amount AS payout_amount
-        FROM Claim_Detail_View
-        ORDER BY Claim_ID DESC
+        SELECT cl.Claim_ID AS claim_id,
+               f.Name AS farmer_name,
+               f.District AS district,
+               cl.Claim_Status AS claim_status,
+               cl.Claim_Date AS claim_date,
+               ip.Sum_Insured AS sum_insured,
+               we.Rainfall AS rainfall,
+               p.Amount AS payout_amount,
+               CASE 
+                   WHEN ip.Premium = 1000.0 AND ip.Sum_Insured = 50000.0 THEN 'Relief Policy'
+                   ELSE 'Standard Policy'
+               END AS policy_source
+        FROM CLAIM cl
+        JOIN INSURANCE_POLICY ip ON cl.Policy_ID = ip.Policy_ID
+        JOIN FARMER f ON ip.Farmer_ID = f.Farmer_ID
+        JOIN WEATHER_EVENT we ON cl.Weather_ID = we.Weather_ID
+        LEFT JOIN PAYOUT p ON cl.Claim_ID = p.Claim_ID
+        ORDER BY cl.Claim_ID DESC
     """)
     data = rows_to_json(cursor)
     cursor.close()
@@ -138,28 +146,41 @@ def add_weather():
     conn = get_connection()
     cursor = conn.cursor()
     try:
+        rainfall_val = float(data['rainfall'])
+        msg = "Weather data recorded."
+        
+        # 1. Check for Drought (Rainfall < 50mm) - Register Policies BEFORE weather event
+        if rainfall_val < 50:
+            msg += " DROUGHT DETECTED!"
+            today = datetime.now().date()
+            next_year = today.replace(year=today.year + 1)
+            
+            # Auto-Register relief policies for farmers in this district
+            cursor.execute("""
+                INSERT INTO INSURANCE_POLICY (Sum_Insured, Premium, Start_Date, End_Date, Farmer_ID)
+                SELECT 50000.0, 1000.0, %s, %s, f.Farmer_ID
+                FROM FARMER f
+                LEFT JOIN INSURANCE_POLICY ip ON f.Farmer_ID = ip.Farmer_ID
+                WHERE f.District = %s AND ip.Policy_ID IS NULL
+            """, (today, next_year, data['district']))
+            
+            affected_count = cursor.rowcount
+            if affected_count > 0:
+                msg += f" {affected_count} farmers auto-enrolled in Relief Policy."
+        
+        # 2. Insert the weather event (This fires the SQL Trigger trg_Auto_Claim_On_Low_Rainfall)
         cursor.execute("""
-            INSERT INTO WEATHER_EVENT
-            (Date, District, Rainfall, Temperature)
+            INSERT INTO WEATHER_EVENT (Date, District, Rainfall, Temperature)
             VALUES (%s, %s, %s, %s)
-        """, (
-            data['date'],
-            data['district'],
-            data['rainfall'],
-            data['temperature']
-        ))
+        """, (data['date'], data['district'], data['rainfall'], data['temperature']))
+        
         conn.commit()
-
-        msg = "Weather added."
-        if float(data['rainfall']) < 50:
-            msg += " Low rainfall detected — claims auto-triggered!"
-
         return jsonify({"message": msg})
 
     except Exception as e:
         conn.rollback()
+        print(f"ADD_WEATHER ERROR: {e}")
         return jsonify({"error": str(e)}), 500
-
     finally:
         cursor.close()
         conn.close()
@@ -225,9 +246,13 @@ def sync_data():
     }
 
     try:
-        # 1. Sync Weather for all districts in FARMER table
+        # 1. Sync Weather for all districts (Farmer districts + Defaults)
         cursor.execute("SELECT DISTINCT District FROM FARMER")
         districts = [row[0] for row in cursor.fetchall()]
+        
+        # Ensure we always sync these key agricultural districts
+        defaults = ["Vidisha", "Nashik", "Bhopal", "Indore", "Hoshangabad", "Sagar"]
+        districts = list(set(districts + defaults))
         
         for district in districts:
             rainfall, temp = fetch_weather(district)
@@ -337,6 +362,10 @@ def get_farmer_analysis():
             is_under_distress = True
             distress_reason.append("Active Insurance Claim")
             
+        # Policy check
+        cursor.execute("SELECT COUNT(*) FROM INSURANCE_POLICY WHERE Farmer_ID = %s", (f_id,))
+        has_policy = cursor.fetchone()[0] > 0
+            
         analysis.append({
             "farmer_id": f_id,
             "name": name,
@@ -344,12 +373,32 @@ def get_farmer_analysis():
             "land_area": land,
             "eligible_schemes": eligible_schemes,
             "is_under_distress": is_under_distress,
-            "distress_reasons": distress_reason
+            "distress_reasons": distress_reason,
+            "has_policy": has_policy
         })
         
     cursor.close()
     conn.close()
     return jsonify(analysis)
+
+@app.route('/api/farmers', methods=['POST'])
+def register_farmer():
+    data = request.json
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO FARMER (Name, District, Land_Area)
+            VALUES (%s, %s, %s)
+        """, (data['name'], data['district'], data['land_area']))
+        conn.commit()
+        return jsonify({"message": "Farmer registered successfully!"})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
 @app.route('/api/schemes/all', methods=['GET'])
 def get_all_schemes():
@@ -360,6 +409,66 @@ def get_all_schemes():
     cursor.close()
     conn.close()
     return jsonify(data)
+
+@app.route('/api/policies', methods=['POST'])
+def apply_policy():
+    data = request.json
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        # Check if farmer exists
+        cursor.execute("SELECT Farmer_ID FROM FARMER WHERE Farmer_ID = %s", (data['farmer_id'],))
+        if not cursor.fetchone():
+            return jsonify({"error": "Farmer not found"}), 404
+
+        today = datetime.now().date()
+        next_year = today.replace(year=today.year + 1)
+
+        cursor.execute("""
+            INSERT INTO INSURANCE_POLICY (Sum_Insured, Premium, Start_Date, End_Date, Farmer_ID)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (data['sum_insured'], data['premium'], today, next_year, data['farmer_id']))
+        conn.commit()
+        return jsonify({"message": "Policy applied successfully!"})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route('/api/claims/manual', methods=['POST'])
+def apply_claim_manual():
+    data = request.json
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        # We need a weather event to link the claim to.
+        # Find the latest one for the district of the farmer who owns this policy
+        cursor.execute("""
+            SELECT we.Weather_ID FROM WEATHER_EVENT we
+            JOIN INSURANCE_POLICY ip ON ip.Policy_ID = %s
+            JOIN FARMER f ON ip.Farmer_ID = f.Farmer_ID
+            WHERE we.District = f.District
+            ORDER BY we.Date DESC LIMIT 1
+        """, (data['policy_id'],))
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({"error": "No weather event found for this district to link claim."}), 400
+        weather_id = row[0]
+
+        cursor.execute("""
+            INSERT INTO CLAIM (Claim_Status, Claim_Date, Policy_ID, Weather_ID)
+            VALUES ('Pending', %s, %s, %s)
+        """, (datetime.now().date(), data['policy_id'], weather_id))
+        conn.commit()
+        return jsonify({"message": "Claim filed successfully and is now PENDING!"})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

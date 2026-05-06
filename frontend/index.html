@@ -18,7 +18,7 @@
         </div>
         <ul class="nav-menu">
             <li class="nav-item"><a href="#" class="nav-link active" onclick="showSection('dashboard')"><i class="fas fa-home"></i> <span>Dashboard</span></a></li>
-            <li class="nav-item"><a href="#" class="nav-link" onclick="showSection('farmers')"><i class="fas fa-users"></i> <span>Farmers</span></a></li>
+            <li class="nav-item"><a href="farmers.html" class="nav-link"><i class="fas fa-users"></i> <span>Farmers</span></a></li>
             <li class="nav-item"><a href="#" class="nav-link" onclick="showSection('claims')"><i class="fas fa-file-invoice-dollar"></i> <span>Claims & Weather</span></a></li>
             <li class="nav-item"><a href="#" class="nav-link" onclick="showSection('trends')"><i class="fas fa-chart-line"></i> <span>Market Trends</span></a></li>
             <li class="nav-item"><a href="#" class="nav-link" onclick="showSection('settings')"><i class="fas fa-cog"></i> <span>Settings</span></a></li>
@@ -70,7 +70,9 @@
                         <div class="card-title">Farmer Welfare & Eligibility Matrix <span class="badge badge-info" id="farmer-count-badge">0 Farmers</span></div>
                         <div class="table-container">
                             <table>
-                                <thead><tr><th>Farmer Name</th><th>District</th><th>Status</th><th>Eligible Schemes</th></tr></thead>
+                                <thead>
+                                    <tr><th>Farmer Name</th><th>District</th><th>Policy Status</th><th>Distress Status</th><th>Eligible Schemes</th></tr>
+                                </thead>
                                 <tbody id="analysis-body"></tbody>
                             </table>
                         </div>
@@ -91,7 +93,7 @@
                 <div class="card-title">Detailed Farmer Records</div>
                 <div class="table-container">
                     <table>
-                        <thead><tr><th>ID</th><th>Name</th><th>District</th><th>Land Area (ha)</th><th>Policies</th><th>Claims</th></tr></thead>
+                        <thead><tr><th>ID</th><th>Name</th><th>District</th><th>Land Area (ha)</th><th>Policy Applied?</th><th>Policies</th><th>Claims</th></tr></thead>
                         <tbody id="farmers-table-body"></tbody>
                     </table>
                 </div>
@@ -148,17 +150,14 @@
         let schemeChartInstance = null;
 
         function showSection(sectionId) {
-            // Update Active Link
             document.querySelectorAll('.nav-link').forEach(link => {
                 link.classList.remove('active');
-                if(link.getAttribute('onclick').includes(sectionId)) link.classList.add('active');
+                if(link.getAttribute('onclick') && link.getAttribute('onclick').includes(sectionId)) link.classList.add('active');
             });
 
-            // Switch Sections
             document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
             document.getElementById(sectionId + '-section').classList.add('active');
 
-            // Update Header
             const titles = {
                 dashboard: ["Agricultural Intelligence Dashboard", "Monitoring farmer welfare and eligibility."],
                 farmers: ["Farmer Directory", "Comprehensive records of all registered farmers."],
@@ -169,7 +168,6 @@
             document.getElementById('page-title').textContent = titles[sectionId][0];
             document.getElementById('page-subtitle').textContent = titles[sectionId][1];
 
-            // Load relevant data
             if(sectionId === 'farmers') loadDetailedFarmers();
             if(sectionId === 'claims') loadDetailedClaims();
             if(sectionId === 'trends') { loadDetailedTrends(); loadSchemeChart(); }
@@ -197,13 +195,24 @@
                 const data = await res.json();
                 const tbody = document.getElementById('analysis-body');
                 const alertList = document.getElementById('distress-alerts');
-                tbody.innerHTML = ''; alertList.innerHTML = '';
+                if(!tbody) return;
+                tbody.innerHTML = ''; 
+                if(alertList) alertList.innerHTML = '';
 
                 data.forEach(f => {
-                    const statusClass = f.is_under_distress ? 'badge-danger' : 'badge-success';
+                    const distressClass = f.is_under_distress ? 'badge-danger' : 'badge-success';
+                    const policyClass = f.has_policy ? 'badge-success' : 'badge-info';
                     const schemesHtml = f.eligible_schemes.map(s => `<span class="badge badge-info" style="margin-right:4px;">${s}</span>`).join('');
-                    tbody.innerHTML += `<tr><td style="font-weight:600;">${f.name}</td><td>${f.district}</td><td><span class="badge ${statusClass}">${f.is_under_distress ? 'Distress' : 'Stable'}</span></td><td>${schemesHtml}</td></tr>`;
-                    if (f.is_under_distress) {
+                    
+                    tbody.innerHTML += `<tr>
+                        <td style="font-weight:600;">${f.name}</td>
+                        <td>${f.district}</td>
+                        <td><span class="badge ${policyClass}">${f.has_policy ? 'Applied' : 'Not Applied'}</span></td>
+                        <td><span class="badge ${distressClass}">${f.is_under_distress ? 'Distress' : 'Stable'}</span></td>
+                        <td>${schemesHtml}</td>
+                    </tr>`;
+                    
+                    if (f.is_under_distress && alertList) {
                         alertList.innerHTML += `<li class="alert-item"><div class="alert-info"><h4>${f.name}</h4><p>${f.distress_reasons.join(', ')}</p></div></li>`;
                     }
                 });
@@ -212,10 +221,19 @@
 
         async function loadDetailedFarmers() {
             try {
-                const res = await fetch(`${API}/farmers`);
+                const res = await fetch(`${API}/farmers/analysis`);
                 const data = await res.json();
                 const tbody = document.getElementById('farmers-table-body');
-                tbody.innerHTML = data.map(f => `<tr><td>${f.farmer_id}</td><td style="font-weight:600;">${f.name}</td><td>${f.district}</td><td>${f.land_area}</td><td>${f.total_policies}</td><td>${f.total_claims}</td></tr>`).join('');
+                if(!tbody) return;
+                tbody.innerHTML = data.map(f => `<tr>
+                    <td>${f.farmer_id}</td>
+                    <td style="font-weight:600;">${f.name}</td>
+                    <td>${f.district}</td>
+                    <td>${f.land_area}</td>
+                    <td><span class="badge ${f.has_policy ? 'badge-success' : 'badge-info'}">${f.has_policy ? 'YES' : 'NO'}</span></td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>`).join('');
             } catch (e) {}
         }
 
@@ -224,6 +242,7 @@
                 const res = await fetch(`${API}/claims`);
                 const data = await res.json();
                 const tbody = document.getElementById('claims-table-body');
+                if(!tbody) return;
                 tbody.innerHTML = data.map(c => {
                     const reason = c.rainfall < 50 ? "Low Rainfall (Drought)" : "Normal Rainfall";
                     const statusClass = c.claim_status === 'Approved' ? 'badge-success' : 'badge-info';
@@ -237,6 +256,7 @@
                 const res = await fetch(`${API}/prices`);
                 const data = await res.json();
                 const tbody = document.getElementById('trends-table-body');
+                if(!tbody) return;
                 tbody.innerHTML = data.map(t => {
                     const statusClass = t.Price_Status === 'NORMAL' ? 'badge-success' : 'badge-danger';
                     return `<tr><td style="font-weight:600;">${t.Crop_Name}</td><td>${t.District}</td><td>₹${t.Modal_Price}</td><td>₹${t.MSP}</td><td><span class="badge ${statusClass}">${t.Price_Status}</span></td></tr>`;
@@ -248,8 +268,10 @@
             try {
                 const res = await fetch(`${API}/schemes`);
                 const data = await res.json();
+                const ctx = document.getElementById('schemeChart');
+                if(!ctx) return;
                 if (schemeChartInstance) schemeChartInstance.destroy();
-                schemeChartInstance = new Chart(document.getElementById('schemeChart'), {
+                schemeChartInstance = new Chart(ctx, {
                     type: 'doughnut',
                     data: {
                         labels: data.map(r => r.Scheme_Name),
@@ -268,11 +290,54 @@
             const btn = document.getElementById('sync-btn');
             const icon = document.getElementById('sync-icon');
             btn.disabled = true; icon.classList.add('fa-spin');
+            
             try {
                 const res = await fetch(`${API}/sync`, { method: 'POST' });
-                if (res.ok) { alert("Data synced!"); init(); }
-            } finally { btn.disabled = false; icon.classList.remove('fa-spin'); }
+                const d = await res.json();
+                if (res.ok) { 
+                    alert(`Data synced! Weather updated for ${d.stats.weather} districts.`); 
+                    init(); 
+                } else {
+                    if (confirm("Live API key not set. Would you like to simulate a low-rainfall event to trigger insurance claims?")) {
+                        simulateLowRainfall();
+                    }
+                }
+            } catch (e) {
+                alert("Server error during synchronization.");
+            } finally { 
+                btn.disabled = false; 
+                icon.classList.remove('fa-spin'); 
+            }
         }
+
+        async function simulateLowRainfall() {
+            const districts = ["Vidisha", "Nashik", "Hoshangabad"];
+            const district = districts[Math.floor(Math.random() * districts.length)];
+            const payload = {
+                date: new Date().toISOString().split('T')[0],
+                district: district,
+                rainfall: (Math.random() * 40).toFixed(1),
+                temperature: (25 + Math.random() * 10).toFixed(1)
+            };
+
+            try {
+                const res = await fetch(`${API}/weather`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const d = await res.json();
+                alert(`Simulation Triggered: ${d.message}`);
+                init();
+            } catch (e) { console.error("Simulation failed", e); }
+        }
+
+        setInterval(() => {
+            if (!document.hidden) {
+                loadStats();
+                loadFarmerAnalysis();
+            }
+        }, 10000);
 
         init();
     </script>

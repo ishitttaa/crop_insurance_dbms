@@ -1,143 +1,253 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>Claims — Crop Insurance System</title>
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claims & Weather - Crop Insurance System</title>
+    <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .form-card { background: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; border: 1px solid #e2e8f0; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.875rem; color: #64748b; }
+        .form-group input { width: 100%; padding: 0.625rem; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; }
+    </style>
 </head>
-
 <body>
 
-  <nav class="navbar">
-    <div class="nav-brand">
-      <div class="nav-logo">CI</div>
-      <span>Crop Insurance System</span>
-    </div>
-    <div class="nav-links">
-      <a href="index.html">Dashboard</a>
-      <a href="farmers.html">Farmers</a>
-      <a href="claims.html" class="active">Claims</a>
-    </div>
-  </nav>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-icon"><i class="fas fa-wheat-awn text-white"></i></div>
+            <span>CropGuard AI</span>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item"><a href="index.html" class="nav-link"><i class="fas fa-home"></i> <span>Dashboard</span></a></li>
+            <li class="nav-item"><a href="farmers.html" class="nav-link"><i class="fas fa-users"></i> <span>Farmers</span></a></li>
+            <li class="nav-item"><a href="claims.html" class="nav-link active"><i class="fas fa-file-invoice-dollar"></i> <span>Claims</span></a></li>
+            <li class="nav-item"><a href="#" class="nav-link"><i class="fas fa-chart-line"></i> <span>Market Trends</span></a></li>
+        </ul>
+    </aside>
 
-  <main class="container">
-    <div class="page-header">
-      <h1>Insurance Claims</h1>
-      <p>All claims generated — including auto-triggered claims from weather events</p>
-    </div>
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="header">
+            <div class="welcome-text">
+                <h1>Claims & Weather Control</h1>
+                <p>Manage insurance claims and simulate weather-driven triggers.</p>
+            </div>
+        </header>
 
-    <div class="card filter-bar">
-      <label>Filter by status:</label>
-      <button class="filter-btn active" onclick="filterStatus('ALL', this)">All</button>
-      <button class="filter-btn" onclick="filterStatus('Pending', this)">Pending</button>
-      <button class="filter-btn" onclick="filterStatus('Approved', this)">Approved</button>
-      <button class="filter-btn" onclick="filterStatus('Rejected', this)">Rejected</button>
-    </div>
+        <!-- Add Weather Event -->
+        <div class="form-card">
+            <h3 style="margin-bottom: 1rem;">Record Weather Event (Manual Trigger)</h3>
+            <p style="font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 1rem;">
+                <i class="fas fa-info-circle"></i> If rainfall is < 50mm, the system will <b>auto-register</b> farmers for relief policies and trigger claims.
+            </p>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>District</label>
+                    <input type="text" id="w-district" placeholder="e.g. Vidisha">
+                </div>
+                <div class="form-group">
+                    <label>Rainfall (mm)</label>
+                    <input type="number" id="w-rainfall" placeholder="e.g. 30">
+                </div>
+                <div class="form-group">
+                    <label>Temperature (°C)</label>
+                    <input type="number" id="w-temp" placeholder="e.g. 32">
+                </div>
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="w-date">
+                </div>
+            </div>
+            <button class="sync-btn" style="background-color: var(--danger); color: white; border: none;" onclick="triggerWeather()">
+                <i class="fas fa-cloud-rain"></i> Record & Process Trigger
+            </button>
+        </div>
 
-    <div class="card">
-      <div class="card-header">Claims List</div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Claim ID</th>
-              <th>Farmer</th>
-              <th>District</th>
-              <th>Date</th>
-              <th>Rainfall (mm)</th>
-              <th>Sum Insured (₹)</th>
-              <th>Payout (₹)</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="claims-body">
-            <tr>
-              <td colspan="9" class="loading">Loading...</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </main>
+        <!-- Manual Actions -->
+        <div class="dashboard-grid">
+            <div class="left-col">
+                <div class="form-card">
+                    <h3 style="margin-bottom: 1rem;">Apply for New Policy</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Farmer ID</label>
+                            <input type="number" id="p-farmer-id" placeholder="e.g. 1">
+                        </div>
+                        <div class="form-group">
+                            <label>Sum Insured (₹)</label>
+                            <input type="number" id="p-sum" value="50000">
+                        </div>
+                        <div class="form-group">
+                            <label>Premium (₹)</label>
+                            <input type="number" id="p-premium" value="1000">
+                        </div>
+                    </div>
+                    <button class="sync-btn" style="background-color: var(--primary); color: white; border: none;" onclick="applyPolicy()">
+                        <i class="fas fa-file-signature"></i> Apply Policy
+                    </button>
+                </div>
+            </div>
+            <div class="right-col">
+                <div class="form-card">
+                    <h3 style="margin-bottom: 1rem;">File Manual Claim</h3>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label>Policy ID</label>
+                        <input type="number" id="cl-policy-id" placeholder="e.g. 101">
+                    </div>
+                    <button class="sync-btn" style="background-color: var(--amber); color: #1e293b; border: none;" onclick="applyClaim()">
+                        <i class="fas fa-hand-holding-dollar"></i> Submit Pending Claim
+                    </button>
+                </div>
+            </div>
+        </div>
 
-  <script>
-    const API = "http://localhost:5000/api";
-    let claims = [];
-    let activeFilter = "ALL";
+        <!-- Claims List -->
+        <div class="card">
+            <div class="card-title">
+                Insurance Claims Registry
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="badge badge-info" onclick="filterClaims('ALL')">All</button>
+                    <button class="badge badge-amber" onclick="filterClaims('Pending')">Pending</button>
+                    <button class="badge badge-success" onclick="filterClaims('Approved')">Approved</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Claim ID</th>
+                            <th>Farmer</th>
+                            <th>District</th>
+                            <th>Policy Type</th>
+                            <th>Rainfall</th>
+                            <th>Payout</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="claims-body">
+                        <!-- Loaded dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
 
-    async function loadClaims() {
-      try {
-        const res = await fetch(`${API}/claims`);
-        claims = await res.json();
-        console.log("CLAIMS DATA:", claims);
-        renderClaims();
-      } catch (e) {
-        document.getElementById("claims-body").innerHTML =
-          `<tr><td colspan="9" class="loading">Could not connect to backend server.</td></tr>`;
-      }
-    }
+    <script>
+        const API = "http://localhost:5000/api";
+        let claimsData = [];
+        let currentFilter = 'ALL';
 
-    function renderClaims() {
-      const tbody = document.getElementById("claims-body");
+        async function loadClaims() {
+            try {
+                const res = await fetch(`${API}/claims`);
+                claimsData = await res.json();
+                renderClaims();
+            } catch (e) { console.error(e); }
+        }
 
-      const data = activeFilter === "ALL"
-        ? claims
-        : claims.filter(c => c.claim_status === activeFilter);
+        function renderClaims() {
+            const tbody = document.getElementById('claims-body');
+            const filtered = currentFilter === 'ALL' ? claimsData : claimsData.filter(c => c.claim_status === currentFilter);
+            
+            tbody.innerHTML = filtered.map(c => `
+                <tr>
+                    <td>#${c.claim_id}</td>
+                    <td style="font-weight:600;">${c.farmer_name}</td>
+                    <td>${c.district}</td>
+                    <td><span class="badge ${c.policy_source === 'Relief Policy' ? 'badge-info' : 'badge-success'}" style="font-size: 10px;">${c.policy_source}</span></td>
+                    <td>${c.rainfall}mm</td>
+                    <td>₹${Number(c.payout_amount || 0).toLocaleString('en-IN')}</td>
+                    <td><span class="badge ${c.claim_status === 'Approved' ? 'badge-success' : 'badge-amber'}">${c.claim_status}</span></td>
+                    <td>
+                        ${c.claim_status === 'Pending' ? 
+                            `<button class="sync-btn" style="padding: 4px 10px; font-size: 11px;" onclick="approveClaim(${c.claim_id})">Approve</button>` : 
+                            `<i class="fas fa-check-circle text-success"></i>`
+                        }
+                    </td>
+                </tr>
+            `).join('');
+        }
 
-      if (!data.length) {
-        tbody.innerHTML = `<tr><td colspan="9" class="loading">No claims found.</td></tr>`;
-        return;
-      }
+        function filterClaims(status) {
+            currentFilter = status;
+            renderClaims();
+        }
 
-      tbody.innerHTML = data.map(c => {
-        const statusClass =
-          c.claim_status === "Approved" ? "green" :
-            c.claim_status === "Rejected" ? "red" : "amber";
+        async function approveClaim(id) {
+            try {
+                const res = await fetch(`${API}/claims/approve/${id}`, { method: 'PUT' });
+                if(res.ok) { alert("Claim Approved!"); loadClaims(); }
+            } catch (e) {}
+        }
 
-        const actionBtn = c.claim_status === "Pending"
-          ? `<button class="btn btn-sm btn-primary" onclick="approveClaim(${c.claim_id})">Approve</button>`
-          : "—";
+        async function triggerWeather() {
+            const payload = {
+                district: document.getElementById('w-district').value,
+                rainfall: document.getElementById('w-rainfall').value,
+                temperature: document.getElementById('w-temp').value,
+                date: document.getElementById('w-date').value || new Date().toISOString().split('T')[0]
+            };
 
-        return `
-      <tr>
-        <td>${c.claim_id}</td>
-        <td>${c.farmer_name}</td>
-        <td>${c.district}</td>
-        <td>${c.claim_date}</td>
-        <td>${c.rainfall}</td>
-        <td>₹${Number(c.sum_insured || 0).toLocaleString("en-IN")}</td>
-        <td>${c.payout_amount ? "₹" + Number(c.payout_amount).toLocaleString("en-IN") : "—"}</td>
-        <td><span class="status-badge ${statusClass}">${c.claim_status}</span></td>
-        <td>${actionBtn}</td>
-      </tr>
-    `;
-      }).join("");
-    }
+            if(!payload.district || !payload.rainfall) {
+                alert("Please enter District and Rainfall");
+                return;
+            }
 
-    function filterStatus(status, btn) {
-      activeFilter = status;
-      document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      renderClaims();
-    }
+            try {
+                const res = await fetch(`${API}/weather`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const d = await res.json();
+                alert(d.message);
+                loadClaims();
+            } catch (e) { alert("Server error"); }
+        }
 
-    async function approveClaim(id) {
-      try {
-        const res = await fetch(`${API}/claims/approve/${id}`, { method: "PUT" });
-        const d = await res.json();
-        alert(d.message);
+        async function applyPolicy() {
+            const payload = {
+                farmer_id: document.getElementById('p-farmer-id').value,
+                sum_insured: document.getElementById('p-sum').value,
+                premium: document.getElementById('p-premium').value
+            };
+            if(!payload.farmer_id) return alert("Enter Farmer ID");
+            try {
+                const res = await fetch(`${API}/policies`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const d = await res.json();
+                alert(d.message || d.error);
+            } catch (e) { alert("Error connecting to server"); }
+        }
+
+        async function applyClaim() {
+            const payload = {
+                policy_id: document.getElementById('cl-policy-id').value
+            };
+            if(!payload.policy_id) return alert("Enter Policy ID");
+            try {
+                const res = await fetch(`${API}/claims/manual`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const d = await res.json();
+                alert(d.message || d.error);
+                loadClaims(); // Refresh list
+            } catch (e) { alert("Error connecting to server"); }
+        }
+
+        // Set default date
+        document.getElementById('w-date').valueAsDate = new Date();
         loadClaims();
-      } catch (e) {
-        alert("Server not reachable.");
-      }
-    }
-
-    loadClaims();
-  </script>
-
+    </script>
 </body>
-
 </html>
