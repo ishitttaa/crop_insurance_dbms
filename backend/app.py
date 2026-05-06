@@ -470,5 +470,59 @@ def apply_claim_manual():
         cursor.close()
         conn.close()
 
+@app.route('/api/farmers/quick-claim', methods=['POST'])
+def quick_claim():
+    data = request.json
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        farmer_id = data['farmer_id']
+        
+        # 1. Check if farmer has an active policy
+        cursor.execute("SELECT Policy_ID FROM INSURANCE_POLICY WHERE Farmer_ID = %s", (farmer_id,))
+        row = cursor.fetchone()
+        
+        if not row:
+            # Create a relief policy
+            today = datetime.now().date()
+            next_year = today.replace(year=today.year + 1)
+            cursor.execute("""
+                INSERT INTO INSURANCE_POLICY (Sum_Insured, Premium, Start_Date, End_Date, Farmer_ID)
+                VALUES (50000.0, 1000.0, %s, %s, %s)
+            """, (today, next_year, farmer_id))
+            policy_id = cursor.lastrowid
+        else:
+            policy_id = row[0]
+            
+        # 2. Find latest weather event for this farmer's district
+        cursor.execute("""
+            SELECT we.Weather_ID FROM WEATHER_EVENT we
+            JOIN FARMER f ON f.Farmer_ID = %s
+            WHERE we.District = f.District
+            ORDER BY we.Date DESC LIMIT 1
+        """, (farmer_id,))
+        w_row = cursor.fetchone()
+        
+        if not w_row:
+            return jsonify({"error": "No weather records found for this farmer's district. Add weather data first."}), 400
+        
+        weather_id = w_row[0]
+        
+        # 3. Create Pending Claim
+        cursor.execute("""
+            INSERT INTO CLAIM (Claim_Status, Claim_Date, Policy_ID, Weather_ID)
+            VALUES ('Pending', %s, %s, %s)
+        """, (datetime.now().date(), policy_id, weather_id))
+        
+        conn.commit()
+        return jsonify({"message": "Relief granted! Policy and Pending Claim created successfully."})
+        
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

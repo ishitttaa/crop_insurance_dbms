@@ -19,7 +19,7 @@
         <ul class="nav-menu">
             <li class="nav-item"><a href="#" class="nav-link active" onclick="showSection('dashboard')"><i class="fas fa-home"></i> <span>Dashboard</span></a></li>
             <li class="nav-item"><a href="farmers.html" class="nav-link"><i class="fas fa-users"></i> <span>Farmers</span></a></li>
-            <li class="nav-item"><a href="#" class="nav-link" onclick="showSection('claims')"><i class="fas fa-file-invoice-dollar"></i> <span>Claims & Weather</span></a></li>
+            <li class="nav-item"><a href="claims.html" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> <span>Claims & Weather</span></a></li>
             <li class="nav-item"><a href="#" class="nav-link" onclick="showSection('trends')"><i class="fas fa-chart-line"></i> <span>Market Trends</span></a></li>
             <li class="nav-item"><a href="#" class="nav-link" onclick="showSection('settings')"><i class="fas fa-cog"></i> <span>Settings</span></a></li>
         </ul>
@@ -193,6 +193,11 @@
             try {
                 const res = await fetch(`${API}/farmers/analysis`);
                 const data = await res.json();
+                
+                // Update badge count
+                const badge = document.getElementById('farmer-count-badge');
+                if(badge) badge.textContent = `${data.length} Farmers`;
+
                 const tbody = document.getElementById('analysis-body');
                 const alertList = document.getElementById('distress-alerts');
                 if(!tbody) return;
