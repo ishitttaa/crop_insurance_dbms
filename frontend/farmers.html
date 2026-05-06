@@ -12,6 +12,15 @@
         .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.875rem; color: #64748b; }
         .form-group input { width: 100%; padding: 0.625rem; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; }
         .form-group input:focus { border-color: #6366f1; }
+        
+        /* Modal Styles */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .modal-content { background: white; width: 90%; max-width: 600px; padding: 2rem; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); position: relative; animation: slideUp 0.3s ease-out; }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .close-btn { position: absolute; top: 1.5rem; right: 1.5rem; cursor: pointer; font-size: 1.5rem; color: #94a3b8; }
+        .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem; }
+        .detail-item h4 { font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 0.25rem; }
+        .detail-item p { font-weight: 600; color: #1e293b; }
     </style>
 </head>
 <body>
@@ -85,6 +94,16 @@
                 </table>
             </div>
         </div>
+
+        <!-- Details Modal -->
+        <div id="details-modal" class="modal">
+            <div class="modal-content">
+                <span class="close-btn" onclick="closeModal()">&times;</span>
+                <div id="modal-inner">
+                    <!-- Loaded dynamically -->
+                </div>
+            </div>
+        </div>
     </main>
 
     <script>
@@ -122,10 +141,54 @@
                         <button class="sync-btn" style="padding: 4px 10px; font-size: 11px; margin-right: 5px;" onclick="quickClaim(${f.farmer_id})">
                             <i class="fas fa-bolt"></i> Quick Claim
                         </button>
-                        <button class="sync-btn" style="padding: 4px 10px; font-size: 11px; background-color: #f1f5f9; color: #1e293b;">Details</button>
+                        <button class="sync-btn" style="padding: 4px 10px; font-size: 11px; background-color: #f1f5f9; color: #1e293b;" onclick="showDetails(${f.farmer_id})">
+                            <i class="fas fa-info-circle"></i> Details
+                        </button>
                     </td>
                 </tr>
             `).join('');
+        }
+
+        async function showDetails(id) {
+            const modal = document.getElementById('details-modal');
+            modal.style.display = 'flex';
+            const content = document.getElementById('modal-inner');
+            content.innerHTML = '<p class="loading">Loading intelligence...</p>';
+
+            try {
+                const res = await fetch(`${API}/farmers/${id}`);
+                const data = await res.json();
+                const p = data.portfolio;
+
+                content.innerHTML = `
+                    <h2 style="color:var(--primary);">${p.Name}</h2>
+                    <p style="color:var(--text-muted); font-size:0.875rem;">Farmer ID: #${p.Farmer_ID} | ${p.District}</p>
+                    
+                    <div class="detail-grid">
+                        <div class="detail-item"><h4>Land Area</h4><p>${p.Land_Area} Acres</p></div>
+                        <div class="detail-item"><h4>Total Policies</h4><p>${p.Total_Policies}</p></div>
+                        <div class="detail-item"><h4>Claims Filed</h4><p>${p.Total_Claims}</p></div>
+                        <div class="detail-item"><h4>Crops</h4><p>${p.Crops_Grown || 'None listed'}</p></div>
+                    </div>
+                    
+                    <div style="margin-top:2rem;">
+                        <h4 style="font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 0.5rem;">Active Policies</h4>
+                        ${data.policies.length ? data.policies.map(pol => `
+                            <div style="background:#f8fafc; padding:10px; border-radius:8px; margin-bottom:8px; border-left:4px solid var(--primary);">
+                                <div style="display:flex; justify-content:space-between;">
+                                    <span style="font-weight:600;">#${pol.Policy_ID}</span>
+                                    <span style="color:var(--success);">₹${pol.Sum_Insured}</span>
+                                </div>
+                                <div style="font-size:0.75rem; color:var(--text-muted);">Ends: ${pol.End_Date}</div>
+                            </div>
+                        `).join('') : '<p>No active policies</p>'}
+                    </div>
+                `;
+            } catch (e) { content.innerHTML = '<p>Error loading data.</p>'; }
+        }
+
+        function closeModal() {
+            document.getElementById('details-modal').style.display = 'none';
         }
 
         async function registerFarmer() {

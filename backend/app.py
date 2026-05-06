@@ -250,8 +250,19 @@ def sync_data():
         cursor.execute("SELECT DISTINCT District FROM FARMER")
         districts = [row[0] for row in cursor.fetchall()]
         
-        # Ensure we always sync these key agricultural districts
-        defaults = ["Vidisha", "Nashik", "Bhopal", "Indore", "Hoshangabad", "Sagar"]
+        # Pan-India Default Districts (Major Agricultural Hubs)
+        defaults = [
+            # Central
+            "Vidisha", "Indore", "Bhopal", "Sagar", "Hoshangabad",
+            # West
+            "Nashik", "Nagpur", "Pune", "Rajkot", "Ahmedabad",
+            # North
+            "Ludhiana", "Karnal", "Amritsar", "Bathinda", "Bareilly",
+            # South
+            "Coimbatore", "Guntur", "Warangal", "Belgaum", "Mysore",
+            # East
+            "Patna", "Bardhaman", "Cuttack", "Guwahati"
+        ]
         districts = list(set(districts + defaults))
         
         for district in districts:
@@ -519,6 +530,30 @@ def quick_claim():
         
     except Exception as e:
         conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route('/api/farmers/<int:farmer_id>', methods=['GET'])
+def get_farmer_details(farmer_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT * FROM Farmer_Portfolio_View WHERE Farmer_ID = %s", (farmer_id,))
+        row = rows_to_json(cursor)
+        if not row:
+            return jsonify({"error": "Farmer not found"}), 404
+        
+        # Also get their active policies
+        cursor.execute("SELECT * FROM INSURANCE_POLICY WHERE Farmer_ID = %s", (farmer_id,))
+        policies = rows_to_json(cursor)
+        
+        return jsonify({
+            "portfolio": row[0],
+            "policies": policies
+        })
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
         cursor.close()
